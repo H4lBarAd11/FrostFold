@@ -27,6 +27,18 @@ Regenerate them from your own screenshot: <code>Scripts/filmstrip.sh --input sho
 
 ---
 
+<p align="center">
+  <a href="#the-fold">The fold</a> ·
+  <a href="#requirements">Requirements</a> ·
+  <a href="#install">Install</a> ·
+  <a href="#running-it">Running it</a> ·
+  <a href="#settings">Settings</a> ·
+  <a href="#how-it-works">How it works</a> ·
+  <a href="#tools">Tools</a>
+</p>
+
+---
+
 FrostFold is a cosmetic effect and nothing else. It runs in the background with
 no dock icon and no menu bar item — no account, no licence key, and no network
 code of any kind.
@@ -83,19 +95,25 @@ in one line.
 ## Install
 
 ```sh
-Scripts/bundle.sh              # native slice, for iterating
-Scripts/bundle.sh --universal  # arm64 + x86_64, for releases
-open dist/FrostFold.app
+git clone <your-fork> && cd FrostFold
+Scripts/bundle.sh --universal      # arm64 + x86_64
+cp -R dist/FrostFold.app /Applications/
+open -a FrostFold
 ```
 
-That compiles a release build, assembles `dist/FrostFold.app` and ad-hoc signs
-it. Use `--universal` for anything you publish: the 2019-and-later Intel 16"
-MacBook Pros have the sensor too.
+`Scripts/bundle.sh` compiles a release build, assembles the bundle, copies in
+the icon and ad-hoc signs it. Drop `--universal` while you're iterating to build
+only the native slice — it's roughly ten times quicker.
 
 > [!NOTE]
 > The ad-hoc signature is not cosmetic. macOS remembers the Screen Recording
-> grant against the bundle's identity, and an unsigned bundle loses the
+> grant against the bundle's identity, so an unsigned bundle loses the
 > permission on every rebuild.
+
+> [!IMPORTANT]
+> The app isn't notarised by Apple, so the first launch of a copy you didn't
+> build yourself needs **right-click → Open** once, or System Settings →
+> Privacy & Security → *Open Anyway*. After that it opens normally.
 
 ## Running it
 
@@ -120,8 +138,12 @@ Login Items.
 FrostFold needs **Screen Recording**, and it is not optional — the glass is
 built out of your live display, so there is nothing to render without it.
 
-On first launch macOS will ask. Grant it under Privacy & Security → Screen
-Recording, then launch the app again (macOS requires the relaunch).
+macOS asks once, on first launch, with its own prompt. Allow it and FrostFold
+carries straight on.
+
+If you dismissed that prompt, macOS won't ask a second time — FrostFold will say
+so and offer to open Privacy & Security → Screen Recording, where you can switch
+it on and start the app again.
 
 The lid-angle sensor itself needs no permission at all.
 
@@ -218,7 +240,9 @@ Scripts/icon.sh
 ```
 
 `filmstrip` produces the images in this README, and it's the quickest way to
-judge a shader change without touching the lid.
+judge a shader change without touching the lid. `icon.sh` draws the app icon
+from code — `Resources/FrostFold.icns` is committed, so you only need it if you
+change the drawing.
 
 <details>
 <summary><strong>Project layout</strong></summary>
