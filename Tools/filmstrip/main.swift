@@ -171,12 +171,12 @@ for angle in angles {
     u.grainAmount    = 1
     u.aspect         = Float(W) / Float(H)
     u.grainScale     = SIMD2(Float(W) / 7, Float(H) / 7)
-    u.opacity        = Float(smoothstep(0, 0.012, fold))
+    u.opacity        = Float(smoothstep(0, 0.006, fold))
     u.dim            = Float(settings.dimming)
     let camera = Double(u.cameraDistance)
     let topY = 2 * cos(tilt) - 1
     let topW = (camera + 2 * sin(tilt)) / camera
-    u.blackout       = Float(smoothstep(0.001, 0.012, max(0, 1 - topY / topW) / 2))
+    u.blackout       = Float(smoothstep(0.002, 0.030, max(0, 1 - topY / topW) / 2))
 
     let target = device.makeTexture(descriptor: outDesc)!
     renderer.render(to: target, source: source, uniforms: u, opaqueBackground: true)

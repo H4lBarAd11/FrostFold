@@ -268,7 +268,7 @@ final class EffectController: ObservableObject {
         // this point in the fold the pane is still aligned with the display it
         // was captured from, so drawing it opaque is invisible; the short ramp
         // only avoids a hard switch at the threshold.
-        u.opacity = Float(smoothstep(0, 0.012, fold01))
+        u.opacity = Float(smoothstep(0, 0.006, fold01))
         u.dim = Float(s.dimming)
         // How much of the display the converged pane has actually uncovered,
         // as a fraction of its height. Tie the fill to that rather than to the
@@ -279,8 +279,12 @@ final class EffectController: ObservableObject {
         let topY = 2 * cos(tilt) - 1
         let topW = (camera + 2 * sin(tilt)) / camera
         let uncovered = max(0, 1 - topY / topW) / 2
-        // ~1px in, ~11px fully in, on a 950pt display.
-        u.blackout = Float(smoothstep(0.001, 0.012, uncovered))
+        // ~2pt in, ~28pt fully in, on a 950pt display. Stretched out from a
+        // tighter ramp because the fill arriving quickly was the last thing
+        // that still read as abrupt at the onset. It has to stay well ahead
+        // of the point where the pane's copy is displaced enough to look
+        // doubled, which was 62pt when that last went wrong.
+        u.blackout = Float(smoothstep(0.002, 0.030, uncovered))
         return u
     }
 }
