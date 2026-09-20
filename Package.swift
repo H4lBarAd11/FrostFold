@@ -8,6 +8,11 @@ let package = Package(
         .executableTarget(
             name: "FrostFold",
             path: "Sources/FrostFold"
+        ),
+        .testTarget(
+            name: "FrostFoldTests",
+            dependencies: ["FrostFold"],
+            path: "Tests/FrostFoldTests"
         )
     ]
 )

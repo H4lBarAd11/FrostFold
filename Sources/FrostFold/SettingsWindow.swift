@@ -6,6 +6,11 @@ struct SettingsView: View {
     @ObservedObject var controller: EffectController
     var openPreview: () -> Void = {}
 
+    // Not a stored preference: the source of truth is what macOS has
+    // registered, which the user can change in System Settings behind our back.
+    @State private var launchAtLogin = LoginItem.isEnabled
+    @State private var loginItemNeedsApproval = LoginItem.isBlockedByUser
+
     var body: some View {
         ScrollView(.vertical) {
             VStack(alignment: .leading, spacing: 20) {
@@ -53,6 +58,27 @@ struct SettingsView: View {
                             Text("Frame rate while the lid is still. Capture stops when settled.")
                                 .font(.footnote)
                                 .foregroundStyle(Palette.inkSoftColor)
+                        }
+                        group("Startup") {
+                            Toggle("Start FrostFold at login", isOn: $launchAtLogin)
+                                .onChange(of: launchAtLogin) { _, wanted in
+                                    LoginItem.set(wanted)
+                                    launchAtLogin = LoginItem.isEnabled
+                                    loginItemNeedsApproval = LoginItem.isBlockedByUser
+                                }
+                            if loginItemNeedsApproval {
+                                Button("Approve in System Settings…") {
+                                    LoginItem.openSystemSettings()
+                                }
+                                .font(.footnote)
+                                Text("macOS is holding this until you allow it.")
+                                    .font(.footnote)
+                                    .foregroundStyle(Palette.caramelColor)
+                            } else {
+                                Text("It runs in the background and waits for the lid.")
+                                    .font(.footnote)
+                                    .foregroundStyle(Palette.inkSoftColor)
+                            }
                         }
                     }
                 }

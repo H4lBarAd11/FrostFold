@@ -11,6 +11,7 @@ swiftc -O \
   Sources/FrostFold/Shaders.swift \
   Sources/FrostFold/MetalRenderer.swift \
   Sources/FrostFold/Settings.swift \
+  Sources/FrostFold/FoldGeometry.swift \
   Tools/filmstrip/main.swift \
   -o "$OUT"
 

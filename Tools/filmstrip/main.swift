@@ -156,34 +156,31 @@ let settings = Settings.shared
 print("background \(W)×\(H)  →  \(outDir)/")
 
 for angle in angles {
-    let fold = settings.fold(forLidAngle: angle)
-    let maxTilt = settings.maxFold * .pi / 180
-    let tilt = fold * maxTilt
-
-    var u = Shaders.PaneUniforms()
-    u.foldRadians    = Float(tilt)
-    u.cameraDistance = Float(9.0 - 6.5 * settings.perspective)
-    u.frostAmount    = settings.intensity.frostGain / Float(max(0.05, sin(maxTilt)))
-    u.gapCurve       = Float(0.75 + 1.15 * settings.perspective)
-    u.edgeSoftness   = Float(settings.edgeSoftness)
-    // The synthetic desktop stands in for a display of the same pixel height.
-    u.cornerRadius   = Float(min(0.9, settings.cornerRadius / (Double(H) / 2)))
-    u.grainAmount    = 1
-    u.aspect         = Float(W) / Float(H)
-    u.grainScale     = SIMD2(Float(W) / 7, Float(H) / 7)
-    u.opacity        = Float(smoothstep(0, 0.006, fold))
-    u.dim            = Float(settings.dimming)
-    let camera = Double(u.cameraDistance)
-    let topY = 2 * cos(tilt) - 1
-    let topW = (camera + 2 * sin(tilt)) / camera
-    u.blackout       = Float(smoothstep(0.002, 0.030, max(0, 1 - topY / topW) / 2))
+    // The same arithmetic the app runs, not a copy of it.
+    let u = FoldGeometry.uniforms(.init(
+        lidAngle: angle,
+        engageAngle: settings.restAngle,
+        shutAngle: settings.shutAngle,
+        hingeSensitivity: settings.hingeSensitivity,
+        maxFold: settings.maxFold,
+        perspective: settings.perspective,
+        edgeSoftness: settings.edgeSoftness,
+        cornerRadiusPoints: settings.cornerRadius,
+        dimming: settings.dimming,
+        frostGain: settings.intensity.frostGain,
+        aspect: Float(W) / Float(H),
+        // The synthetic desktop stands in for a display of this height.
+        displayHeightPoints: Double(H),
+        drawableSize: SIMD2(Float(W), Float(H))))
 
     let target = device.makeTexture(descriptor: outDesc)!
     renderer.render(to: target, source: source, uniforms: u, opaqueBackground: true)
 
     let file = String(format: "%@/fold-%03.0f.png", outDir, angle)
     writePNG(target, to: file)
-    print(String(format: "  lid %5.1f°  fold %.3f  tilt %4.1f°  frost@top %.2f",
-                 angle, fold, tilt * 180 / .pi,
-                 min(1.0, Double(u.frostAmount) * sin(tilt))))
+
+    let tilt = Double(u.foldRadians)
+    print(String(format: "  lid %5.1f°  fold %.3f  tilt %4.1f°  frost@edge %.2f  fill %.2f",
+                 angle, settings.fold(forLidAngle: angle), tilt * 180 / .pi,
+                 min(1.0, Double(u.frostAmount) * sin(tilt)), Double(u.blackout)))
 }

@@ -86,19 +86,10 @@ final class Settings: ObservableObject {
         restAngle = 85;             maxFold = 68
     }
 
-    /// Maps a raw lid angle onto 0...1 fold, applying the hinge-sensitivity curve.
-    /// 0 = pane flat against the display, nothing to see; 1 = fully lifted.
+    /// Maps a raw lid angle onto 0...1 fold. The curve itself lives in
+    /// `FoldGeometry`, where it can be tested.
     func fold(forLidAngle angle: Double) -> Double {
-        guard restAngle > shutAngle else { return 0 }
-        // Normalised over the span the lid actually travels through, not over
-        // the whole 0...engage range: a lid never reaches 0°, and treating it
-        // as though it might leaves the fold unfinished as the lid shuts.
-        let t = max(0, min(1, (restAngle - angle) / (restAngle - shutAngle)))
-        // Sensitivity biases the curve: low means almost nothing happens until
-        // the lid is well down, high means the fold rises as soon as it moves.
-        // Weighted lazy, because engaging linearly from the engage angle reads
-        // as the effect snapping on rather than gathering.
-        let gamma = 3.4 - 3.0 * hingeSensitivity   // 3.4 (lazy) ... 0.4 (eager)
-        return pow(t, gamma)
+        FoldGeometry.fold(lidAngle: angle, engage: restAngle,
+                          shut: shutAngle, sensitivity: hingeSensitivity)
     }
 }

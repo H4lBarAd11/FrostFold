@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build and test
+    runs-on: macos-15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Versions
+        run: |
+          swift --version
+          sw_vers
+
+      - name: Build
+        run: swift build -c release
+
+      # The fold's arithmetic, including the invariants for two bugs that
+      # reached a running build: the onset flashing dark, and the pane's copy
+      # showing over a live display as a doubled image.
+      - name: Test
+        run: swift test
+
+      # The runner has no lid-angle sensor and no Screen Recording grant, so a
+      # full --selftest cannot pass here. Assembling and signing the bundle can,
+      # and that is the part that breaks silently.
+      - name: Bundle
+        run: |
+          Scripts/bundle.sh
+          test -x dist/FrostFold.app/Contents/MacOS/FrostFold
+          test -f dist/FrostFold.app/Contents/Info.plist
+          codesign --verify --verbose=2 dist/FrostFold.app
+
+      - name: Check the icon is in the bundle
+        run: test -f dist/FrostFold.app/Contents/Resources/FrostFold.icns

@@ -16,6 +16,7 @@ moves at the speed of your hand. Stop halfway and it holds there.
   <img alt="Metal" src="https://img.shields.io/badge/Renderer-Metal-6E8B6E?style=flat-square">
   <img alt="No network" src="https://img.shields.io/badge/Network-none-4F6650?style=flat-square">
   <img alt="MIT licence" src="https://img.shields.io/badge/Licence-MIT-8C4C14?style=flat-square">
+  <a href="https://github.com/H4lBarAd11/FrostFold/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/H4lBarAd11/FrostFold/actions/workflows/ci.yml/badge.svg"></a>
 </p>
 
 <img src="docs/images/hero.png" width="820" alt="The display frosted toward the top and clear along the bottom edge">
@@ -300,6 +301,8 @@ Sources/FrostFold/
   SelfTest.swift         --selftest
 Tools/filmstrip/         still-image renderer
 Tools/icon/              draws the app icon
+Tests/FrostFoldTests/    the fold's arithmetic, and regressions for two
+                         bugs that a still image could not have caught
 Scripts/                 bundle.sh, filmstrip.sh, icon.sh, signing-identity.sh
 .claude/skills/apple-design/   the macOS design language this UI follows
 ```

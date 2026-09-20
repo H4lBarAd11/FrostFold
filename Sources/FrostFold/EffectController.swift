@@ -231,60 +231,23 @@ final class EffectController: ObservableObject {
 
     func makeUniforms(angle: Double, view: GlassView) -> Shaders.PaneUniforms {
         let s = Settings.shared
-        let fold01 = s.fold(forLidAngle: angle)
         let size = view.metalLayer.drawableSize
-
-        let maxTilt = s.maxFold * .pi / 180.0
-        let tilt = fold01 * maxTilt
-
-        // Reduce Motion is the user saying this should not move. For an effect
-        // that is motion, honour it by damping rather than by switching off —
-        // the frost still reads, the pane barely travels.
-        let motionScale = reduceMotion ? 0.35 : 1.0
-
-        var u = Shaders.PaneUniforms()
-        u.foldRadians = Float(tilt * motionScale)
-        u.cameraDistance = Float(9.0 - 6.5 * s.perspective)    // 9 (flat) ... 2.5 (hard)
-        // Normalised so the free edge reaches the intensity's frost gain when
-        // the fold is fully in, whatever the maximum tilt happens to be.
-        // Reduce Transparency asks for legibility over glass, so scatter less.
-        let frostScale: Float = reduceTransparency ? 0.5 : 1.0
-        u.frostAmount = frostScale * s.intensity.frostGain
-                      / Float(max(0.05, sin(maxTilt * motionScale)))
-        u.gapCurve = Float(0.75 + 1.15 * s.perspective)
-        // Increase Contrast wants a defined edge, not a fade.
-        u.edgeSoftness = Float(increaseContrast ? s.edgeSoftness * 0.25 : s.edgeSoftness)
-        // Pane-local y spans [-1, 1] across the display height, so one unit is
-        // half the display in points.
-        let halfHeightPoints = max(1.0, (view.window?.frame.height ?? 800) / 2)
-        u.cornerRadius = Float(min(0.9, s.cornerRadius / halfHeightPoints))
-        u.grainAmount = 1.0
-        u.aspect = view.aspect
-        u.grainScale = SIMD2(Float(max(1, size.width / 7)), Float(max(1, size.height / 7)))
-        // The pane must reach full opacity almost immediately. The fill behind
-        // it is opaque by the time a few points are uncovered, so any lingering
-        // transparency in the pane lets that black through across the whole
-        // display — which read as the screen flashing dark at the onset. At
-        // this point in the fold the pane is still aligned with the display it
-        // was captured from, so drawing it opaque is invisible; the short ramp
-        // only avoids a hard switch at the threshold.
-        u.opacity = Float(smoothstep(0, 0.006, fold01))
-        u.dim = Float(s.dimming)
-        // How much of the display the converged pane has actually uncovered,
-        // as a fraction of its height. Tie the fill to that rather than to the
-        // fold: a hairline of live display is invisible, but once the pane has
-        // moved far enough for its copy to sit visibly offset, anything left
-        // showing behind it reads as a doubled image.
-        let camera = Double(u.cameraDistance)
-        let topY = 2 * cos(tilt) - 1
-        let topW = (camera + 2 * sin(tilt)) / camera
-        let uncovered = max(0, 1 - topY / topW) / 2
-        // ~2pt in, ~28pt fully in, on a 950pt display. Stretched out from a
-        // tighter ramp because the fill arriving quickly was the last thing
-        // that still read as abrupt at the onset. It has to stay well ahead
-        // of the point where the pane's copy is displaced enough to look
-        // doubled, which was 62pt when that last went wrong.
-        u.blackout = Float(smoothstep(0.002, 0.030, uncovered))
-        return u
+        return FoldGeometry.uniforms(.init(
+            lidAngle: angle,
+            engageAngle: s.restAngle,
+            shutAngle: s.shutAngle,
+            hingeSensitivity: s.hingeSensitivity,
+            maxFold: s.maxFold,
+            perspective: s.perspective,
+            edgeSoftness: s.edgeSoftness,
+            cornerRadiusPoints: s.cornerRadius,
+            dimming: s.dimming,
+            frostGain: s.intensity.frostGain,
+            aspect: view.aspect,
+            displayHeightPoints: Double(view.window?.frame.height ?? 800),
+            drawableSize: SIMD2(Float(size.width), Float(size.height)),
+            reduceMotion: reduceMotion,
+            reduceTransparency: reduceTransparency,
+            increaseContrast: increaseContrast))
     }
 }
