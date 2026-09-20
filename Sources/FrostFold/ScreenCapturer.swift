@@ -30,12 +30,24 @@ final class ScreenCapturer: NSObject, SCStreamOutput, SCStreamDelegate {
     private var stream: SCStream?
     private let outputQueue = DispatchQueue(label: "io.github.frostfold.capture", qos: .userInteractive)
 
+    /// An `MTLTexture` from `CVMetalTextureGetTexture` does not retain what it
+    /// is built on. Drop the `CVMetalTexture` or the `CVPixelBuffer` and the
+    /// IOSurface goes straight back to ScreenCaptureKit's pool to be
+    /// overwritten, leaving the texture sampling freed memory. All three have
+    /// to be held together for as long as the frame is in use.
+    private struct Frame {
+        let texture: MTLTexture
+        let cvTexture: CVMetalTexture
+        let pixelBuffer: CVPixelBuffer
+    }
+
     private let lock = NSLock()
-    private var _latest: MTLTexture?
+    private var _latest: Frame?
+
     /// Most recently captured frame, or nil if nothing has arrived yet.
     var latestTexture: MTLTexture? {
         lock.lock(); defer { lock.unlock() }
-        return _latest
+        return _latest?.texture
     }
 
     private func clearLatest() {
@@ -152,7 +164,12 @@ final class ScreenCapturer: NSObject, SCStreamOutput, SCStreamDelegate {
         guard result == kCVReturnSuccess,
               let cvTexture, let texture = CVMetalTextureGetTexture(cvTexture) else { return }
 
-        lock.lock(); _latest = texture; lock.unlock()
+        let frame = Frame(texture: texture, cvTexture: cvTexture, pixelBuffer: pixelBuffer)
+        lock.lock(); _latest = frame; lock.unlock()
+
+        // Releases only the cache entries nothing is holding, so the frame we
+        // just kept survives.
+        CVMetalTextureCacheFlush(cache, 0)
     }
 
     // MARK: - SCStreamDelegate
