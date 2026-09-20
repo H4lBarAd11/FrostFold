@@ -173,6 +173,7 @@ for angle in angles {
     u.grainScale     = SIMD2(Float(W) / 7, Float(H) / 7)
     u.opacity        = Float(smoothstep(0, 0.04, fold))
     u.dim            = Float(settings.dimming)
+    u.blackout       = Float(smoothstep(0.10, 0.32, fold))
 
     let target = device.makeTexture(descriptor: outDesc)!
     renderer.render(to: target, source: source, uniforms: u, opaqueBackground: true)

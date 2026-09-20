@@ -265,6 +265,11 @@ final class EffectController: ObservableObject {
         // blackout arrived effectively as a step.
         u.opacity = Float(smoothstep(0, 0.14, fold01))
         u.dim = Float(s.dimming)
+        // The pane converges from the very first degree, so it uncovers a
+        // hairline at the edges almost at once. Filling that with black
+        // straight away reads as a glitch; let it show the real display and
+        // bring the fill in once the uncovered region is actually a region.
+        u.blackout = Float(smoothstep(0.10, 0.32, fold01))
         return u
     }
 }

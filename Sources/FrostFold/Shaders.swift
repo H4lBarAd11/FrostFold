@@ -26,6 +26,11 @@ struct PaneUniforms {
     var opacity: Float = 1
     /// How much the glass dims as the gap opens.
     var dim: Float = 0
+    /// Opacity of the fill behind the pane. Ramps in later than the pane
+    /// itself, so the sliver the fold first uncovers shows the real display
+    /// rather than a black hairline.
+    var blackout: Float = 0
+    var _pad: Float = 0
 }
 
 struct BlurUniforms {
@@ -48,6 +53,8 @@ struct PaneUniforms {
     float2 grainScale;
     float  opacity;
     float  dim;
+    float  blackout;
+    float  _pad;
 };
 
 struct BlurUniforms { float2 direction; };
@@ -107,7 +114,8 @@ fragment half4 blur_fragment(BlitOut in [[stage_in]],
 // nothing left to show. Everything outside the pane's silhouette goes black.
 fragment half4 blackout_fragment(BlitOut in [[stage_in]],
                                  constant PaneUniforms& u [[buffer(0)]]) {
-    return half4(0.0h, 0.0h, 0.0h, half(u.opacity));
+    if (u.blackout <= 0.001) { discard_fragment(); }
+    return half4(0.0h, 0.0h, 0.0h, half(u.blackout));
 }
 
 // --------------------------------------------------------------- glass pane
