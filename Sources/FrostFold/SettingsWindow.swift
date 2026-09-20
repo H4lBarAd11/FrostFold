@@ -80,6 +80,11 @@ struct SettingsView: View {
         // Tint once at the root; controls inherit rather than being painted
         // individually. A dense utility panel takes .small throughout, and the
         // system decides each control's height from that.
+        //
+        // Sage here is a deliberate departure from the house rule that reserves
+        // the magenta accent for controls a person acts on. FrostFold has no
+        // writes/refuses distinction for sage and caramel to carry, so they are
+        // free to be the app's own colours. Decided, not overlooked.
         .tint(Palette.sageColor)
         .controlSize(.small)
         .background(Palette.backgroundColor)
