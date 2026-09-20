@@ -17,7 +17,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.accessory)
 
         guard let controller = EffectController() else {
-            fatal("MacGlass couldn't start Metal on this Mac.")
+            fatal("FrostFold couldn't start Metal on this Mac.")
             return
         }
         self.controller = controller
@@ -44,12 +44,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ScreenCapturer.requestPermission()
 
         let alert = NSAlert()
-        alert.messageText = "MacGlass needs Screen Recording"
+        alert.messageText = "FrostFold needs Screen Recording"
         alert.informativeText = """
             The frosted pane is built out of your live display, so macOS \
             requires Screen Recording permission.
 
-            Enable MacGlass under Privacy & Security → Screen Recording, \
+            Enable FrostFold under Privacy & Security → Screen Recording, \
             then launch it again.
             """
         alert.alertStyle = .informational
@@ -80,7 +80,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = statusItem.button {
             button.image = NSImage(systemSymbolName: "laptopcomputer",
-                                   accessibilityDescription: "MacGlass")
+                                   accessibilityDescription: "FrostFold")
             button.image?.isTemplate = true
             button.imagePosition = .imageLeading
         }
@@ -101,7 +101,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(withTitle: "Preview…", action: #selector(openPreview), keyEquivalent: "p").target = self
         menu.addItem(withTitle: "Settings…", action: #selector(openSettings), keyEquivalent: ",").target = self
         menu.addItem(.separator())
-        menu.addItem(withTitle: "Quit MacGlass", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        menu.addItem(withTitle: "Quit FrostFold", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         statusItem.menu = menu
     }
 

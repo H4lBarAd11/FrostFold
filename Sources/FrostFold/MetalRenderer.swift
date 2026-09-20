@@ -29,7 +29,7 @@ final class MetalRenderer {
         do {
             library = try device.makeLibrary(source: Shaders.source, options: nil)
         } catch {
-            NSLog("MacGlass: shader compilation failed — \(error)")
+            NSLog("FrostFold: shader compilation failed — \(error)")
             return nil
         }
 

@@ -22,7 +22,7 @@ func argument(_ name: String) -> String? {
 
 if CommandLine.arguments.contains("--help") {
     print("""
-    filmstrip — render the MacGlass pane over a still image
+    filmstrip — render the FrostFold pane over a still image
 
       --input  <file.png>   background image (default: a synthetic desktop)
       --out    <dir>        output directory (default: ./filmstrip)

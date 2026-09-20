@@ -28,7 +28,7 @@ final class LidAngleSensor {
     /// The manager owns the open handle on the device. Let it go out of scope
     /// and the device closes, after which every `GetReport` quietly fails.
     private let manager: IOHIDManager
-    private let queue = DispatchQueue(label: "io.github.macglass.sensor", qos: .userInteractive)
+    private let queue = DispatchQueue(label: "io.github.frostfold.sensor", qos: .userInteractive)
     private var timer: DispatchSourceTimer?
 
     private var smoothed: Double = 0

@@ -2,12 +2,12 @@
 import PackageDescription
 
 let package = Package(
-    name: "MacGlass",
+    name: "FrostFold",
     platforms: [.macOS(.v14)],
     targets: [
         .executableTarget(
-            name: "MacGlass",
-            path: "Sources/MacGlass"
+            name: "FrostFold",
+            path: "Sources/FrostFold"
         )
     ]
 )

@@ -28,7 +28,7 @@ final class ScreenCapturer: NSObject, SCStreamOutput, SCStreamDelegate {
     private let device: MTLDevice
     private var textureCache: CVMetalTextureCache?
     private var stream: SCStream?
-    private let outputQueue = DispatchQueue(label: "io.github.macglass.capture", qos: .userInteractive)
+    private let outputQueue = DispatchQueue(label: "io.github.frostfold.capture", qos: .userInteractive)
 
     private let lock = NSLock()
     private var _latest: MTLTexture?

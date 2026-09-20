@@ -1,4 +1,4 @@
-# MacGlass
+# FrostFold
 
 A pane of frosted glass, hinged along the bottom edge of your MacBook's display,
 that tracks the lid-angle sensor in real time. Close the lid slowly and the
@@ -28,10 +28,10 @@ tells you in one line.
 ```sh
 Scripts/bundle.sh              # native slice, for iterating
 Scripts/bundle.sh --universal  # arm64 + x86_64, for releases
-open dist/MacGlass.app
+open dist/FrostFold.app
 ```
 
-That compiles a release build, assembles `dist/MacGlass.app` and ad-hoc signs
+That compiles a release build, assembles `dist/FrostFold.app` and ad-hoc signs
 it. Use `--universal` for anything you publish: the 2019-and-later Intel 16"
 MacBook Pros have the sensor too. The signature matters: macOS remembers the Screen Recording grant against
 the bundle's identity, and an unsigned bundle loses the permission on every
@@ -39,7 +39,7 @@ rebuild.
 
 ## Permission
 
-MacGlass needs **Screen Recording**, and it is not optional — the glass is
+FrostFold needs **Screen Recording**, and it is not optional — the glass is
 built out of your live display, so there is nothing to render without it.
 
 On first launch macOS will ask. Grant it under Privacy & Security → Screen
@@ -79,11 +79,11 @@ hundred times.
 **The sensor.** MacBooks expose the hinge as an Apple HID sensor device (`las`,
 usage page `0x20`, usage `0x8A`). Two feature reports carry the angle: report 7
 is a little-endian `UInt32` in hundredths of a degree, report 1 a `UInt16` in
-whole degrees. MacGlass prefers 7 and falls back to 1. It polls at 120 Hz
+whole degrees. FrostFold prefers 7 and falls back to 1. It polls at 120 Hz
 while the lid is moving and drops to the stationary rate once it settles.
 
 **The capture.** A ScreenCaptureKit stream over the built-in display, with
-MacGlass's own windows excluded from the content filter (and marked
+FrostFold's own windows excluded from the content filter (and marked
 `sharingType = .none`) so the pane can't capture its own output and spiral.
 Frames arrive as `IOSurface`-backed pixel buffers and become Metal textures
 without a copy.
@@ -118,7 +118,7 @@ network code of any kind. Settings live in `UserDefaults`.
 
 ```sh
 # Headless diagnostics: Metal, shader compilation, the sensor, the permission.
-dist/MacGlass.app/Contents/MacOS/MacGlass --selftest
+dist/FrostFold.app/Contents/MacOS/FrostFold --selftest
 
 # Render the pane over a still image at a range of lid angles.
 Scripts/filmstrip.sh --input shot.png --out docs/images --mode both
@@ -130,7 +130,7 @@ way to judge a shader change without touching the lid.
 ## Layout
 
 ```
-Sources/MacGlass/
+Sources/FrostFold/
   LidAngleSensor.swift   HID feature-report reader, adaptive polling
   ScreenCapturer.swift   ScreenCaptureKit stream → MTLTexture
   Shaders.swift          Metal source, compiled at runtime
