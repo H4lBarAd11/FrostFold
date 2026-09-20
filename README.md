@@ -11,11 +11,11 @@ touches, frosted where it has lifted. It reads the lid-angle sensor directly, so
 moves at the speed of your hand. Stop halfway and it holds there.
 
 <p>
-  <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-1c1c1e?style=flat-square&logo=apple&logoColor=white">
-  <img alt="Swift 5.9" src="https://img.shields.io/badge/Swift-5.9-f05138?style=flat-square&logo=swift&logoColor=white">
-  <img alt="Metal" src="https://img.shields.io/badge/Renderer-Metal-8e5cf7?style=flat-square">
-  <img alt="No network" src="https://img.shields.io/badge/Network-none-2ea043?style=flat-square">
-  <img alt="MIT licence" src="https://img.shields.io/badge/Licence-MIT-0969da?style=flat-square">
+  <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-6E8B6E?style=flat-square&logo=apple&logoColor=F9F8EF">
+  <img alt="Swift 5.9" src="https://img.shields.io/badge/Swift-5.9-B5651D?style=flat-square&logo=swift&logoColor=F9F8EF">
+  <img alt="Metal" src="https://img.shields.io/badge/Renderer-Metal-6E8B6E?style=flat-square">
+  <img alt="No network" src="https://img.shields.io/badge/Network-none-4F6650?style=flat-square">
+  <img alt="MIT licence" src="https://img.shields.io/badge/Licence-MIT-8C4C14?style=flat-square">
 </p>
 
 <img src="docs/images/hero.png" width="820" alt="The display frosted toward the top and clear along the bottom edge">

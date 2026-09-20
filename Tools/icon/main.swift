@@ -31,10 +31,10 @@ func draw(into ctx: CGContext, size: CGFloat) {
     ctx.clip()
 
     // The display with nothing left to show: the picture has folded away.
-    ctx.setFillColor(rgb(8, 9, 18))
+    ctx.setFillColor(rgb(18, 20, 18))
     ctx.fill(body)
     if let glow = CGGradient(colorsSpace: space,
-                             colors: [rgb(38, 42, 86, 0.9), rgb(8, 9, 18, 0)] as CFArray,
+                             colors: [rgb(50, 64, 50, 0.95), rgb(18, 20, 18, 0)] as CFArray,
                              locations: [0, 1]) {
         ctx.drawRadialGradient(glow,
                                startCenter: CGPoint(x: canvas/2, y: inset + side * 0.18), startRadius: 0,
@@ -60,17 +60,17 @@ func draw(into ctx: CGContext, size: CGFloat) {
     ctx.addPath(pane)
     ctx.clip()
 
-    // What the glass still carries, clear at the hinge.
+    // What the glass still carries, clear at the hinge: sage into caramel.
     if let wallpaper = CGGradient(colorsSpace: space, colors: [
-        rgb(58, 92, 214), rgb(126, 74, 200), rgb(228, 118, 96)] as CFArray,
-        locations: [0, 0.5, 1]) {
+        rgb(0x6E, 0x8B, 0x6E), rgb(0x8E, 0x7A, 0x4A), rgb(0xB5, 0x65, 0x1D)] as CFArray,
+        locations: [0, 0.55, 1]) {
         ctx.drawLinearGradient(wallpaper,
                                start: CGPoint(x: cx - hingeHalf, y: hingeY),
                                end: CGPoint(x: cx + hingeHalf, y: topY), options: [])
     }
     // Frost climbing with the gap: clear where it touches, milky where it lifts.
     if let frost = CGGradient(colorsSpace: space, colors: [
-        rgb(255, 255, 255, 0.0), rgb(236, 242, 255, 0.55), rgb(244, 248, 255, 0.94)] as CFArray,
+        rgb(0xF9, 0xF8, 0xEF, 0.0), rgb(0xF2, 0xF4, 0xEC, 0.58), rgb(0xF9, 0xF8, 0xEF, 0.95)] as CFArray,
         locations: [0, 0.55, 1]) {
         ctx.drawLinearGradient(frost,
                                start: CGPoint(x: cx, y: hingeY),
@@ -79,7 +79,7 @@ func draw(into ctx: CGContext, size: CGFloat) {
     ctx.restoreGState()
 
     // The hinge itself, catching a little light.
-    ctx.setStrokeColor(rgb(226, 236, 255, 0.85))
+    ctx.setStrokeColor(rgb(0xF9, 0xF8, 0xEF, 0.9))
     ctx.setLineWidth(side * 0.012)
     ctx.setLineCap(.round)
     ctx.move(to: CGPoint(x: cx - hingeHalf, y: hingeY))
@@ -90,7 +90,7 @@ func draw(into ctx: CGContext, size: CGFloat) {
 
     // A hairline so the shape holds its edge on a light background.
     ctx.addPath(shape)
-    ctx.setStrokeColor(rgb(255, 255, 255, 0.10))
+    ctx.setStrokeColor(rgb(0xF9, 0xF8, 0xEF, 0.10))
     ctx.setLineWidth(3)
     ctx.strokePath()
 }

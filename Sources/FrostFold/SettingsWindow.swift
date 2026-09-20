@@ -52,7 +52,7 @@ struct SettingsView: View {
                             .labelsHidden()
                             Text("Frame rate while the lid is still. Capture stops when settled.")
                                 .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Palette.inkSoftColor)
                         }
                     }
                 }
@@ -77,6 +77,8 @@ struct SettingsView: View {
             .padding(20)
             .frame(width: 780, alignment: .leading)
         }
+        .tint(Palette.sageColor)
+        .background(Palette.backgroundColor)
         // A ScrollView has no intrinsic size, so without an explicit frame the
         // hosting controller collapses it to nothing. Fixed height keeps the
         // panel wide and short, and lets it scroll if it ever outgrows this.
@@ -89,14 +91,15 @@ struct SettingsView: View {
                                       @ViewBuilder _ content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title.uppercased())
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(.secondary)
-                .tracking(0.6)
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(Palette.caramelDeepColor)
+                .tracking(0.9)
             content()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
-        .background(.quaternary.opacity(0.35), in: RoundedRectangle(cornerRadius: 10))
+        .background(Palette.sageTintColor, in: RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Palette.lineColor, lineWidth: 1))
     }
 
     @ViewBuilder
@@ -104,7 +107,7 @@ struct SettingsView: View {
         if let message = controller.statusMessage {
             Label(message, systemImage: "exclamationmark.triangle.fill")
                 .font(.caption)
-                .foregroundStyle(.orange)
+                .foregroundStyle(Palette.caramelColor)
                 .lineLimit(2)
         } else if controller.sensorAvailable {
             Text(String(format: "Lid %.1f°", controller.displayAngle))
@@ -133,14 +136,14 @@ struct SettingsView: View {
                 Text(title).font(.callout)
                 Spacer()
                 Text(readout(value.wrappedValue))
-                    .font(.callout)
+                    .font(.callout.weight(.medium))
                     .monospacedDigit()
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Palette.sageDeepColor)
             }
             Slider(value: value, in: range)
             Text(note)
                 .font(.caption)
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(Palette.inkSoftColor)
                 .lineLimit(1)
         }
     }
@@ -168,6 +171,7 @@ final class SettingsWindowController: NSWindowController {
                               defer: false)
         window.title = "FrostFold Settings"
         window.contentView = hosting
+        window.backgroundColor = Palette.background
         window.isReleasedWhenClosed = false
         window.sharingType = .none
         window.center()
