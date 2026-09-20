@@ -1,52 +1,45 @@
-<div align="center">
-
-<img src="docs/images/icon.png" width="128" alt="">
-
-# FrostFold
-
-**A pane of frosted glass, hinged along the bottom edge of your MacBook's display.**
-
-Close the lid and the picture lifts away with the glass — clear where it still<br>
-touches, frosted where it has lifted. It reads the lid-angle sensor directly, so it<br>
-moves at the speed of your hand. Stop halfway and it holds there.
-
-<p>
-  <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-6E8B6E?style=flat-square&logo=apple&logoColor=F9F8EF">
-  <img alt="Swift 5.9" src="https://img.shields.io/badge/Swift-5.9-B5651D?style=flat-square&logo=swift&logoColor=F9F8EF">
-  <img alt="Metal" src="https://img.shields.io/badge/Renderer-Metal-6E8B6E?style=flat-square">
-  <img alt="No network" src="https://img.shields.io/badge/Network-none-4F6650?style=flat-square">
-  <img alt="MIT licence" src="https://img.shields.io/badge/Licence-MIT-8C4C14?style=flat-square">
-  <a href="https://github.com/H4lBarAd11/FrostFold/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/H4lBarAd11/FrostFold/actions/workflows/ci.yml/badge.svg"></a>
+<p align="center">
+  <img src="docs/readme/banner.svg" alt="FrostFold — your MacBook's display tips back behind frosted glass as you close the lid" width="100%">
 </p>
-
-<img src="docs/images/hero.png" width="820" alt="The display frosted toward the top and clear along the bottom edge">
-
-<sub>Stills are rendered from a synthetic desktop so none of mine ends up in the repo.<br>
-Regenerate them from your own screenshot: <code>Scripts/filmstrip.sh --input shot.png --out docs/images</code></sub>
-
-</div>
-
----
 
 <p align="center">
-  <a href="#the-fold">The fold</a> ·
-  <a href="#requirements">Requirements</a> ·
-  <a href="#install">Install</a> ·
-  <a href="#running-it">Running it</a> ·
-  <a href="#settings">Settings</a> ·
-  <a href="#how-it-works">How it works</a> ·
-  <a href="#tools">Tools</a>
+  <a href="https://github.com/H4lBarAd11/FrostFold/actions/workflows/ci.yml"><img src="https://github.com/H4lBarAd11/FrostFold/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <img src="https://img.shields.io/badge/macOS-14%2B-1B1A17" alt="macOS 14+">
+  <img src="https://img.shields.io/badge/licence-MIT-93B293" alt="MIT">
 </p>
 
----
+> [!IMPORTANT]
+> **Needs a MacBook whose hinge reports a continuous angle.** Apple silicon Airs
+> (M2 and later) and the 14"/16" Pros have that sensor; the M1 Air, the 13" M1 Pro
+> and every desktop Mac do not. Build it and run `--selftest` and it will tell you
+> in one line.
 
 FrostFold is a cosmetic effect and nothing else. It runs in the background with
 no dock icon and no menu bar item — no account, no licence key, and no network
 code of any kind.
 
+It is a personal project by [Riccardo Nevoso](https://github.com/H4lBarAd11),
+written from a description of how such an effect ought to behave rather than
+from anyone else's source, assets or wording.
+
+<p align="center">
+  <img src="docs/readme/hero.png" width="820" alt="The display converging behind frosted glass, clear along the hinge and milky at the top">
+</p>
+
+<p align="center">
+  <sub>Stills are rendered from a synthetic desktop, so none of mine ends up in the repository.<br>
+  Regenerate them from your own screenshot: <code>Scripts/filmstrip.sh --input shot.png --out docs/readme</code></sub>
+</p>
+
+## Status
+
+Finished and in daily use. The effect, the settings panel, the preview scrubber,
+start-at-login and the accessibility behaviour are all in place. What is not:
+notarisation, so a downloaded copy needs one right-click to open.
+
 ## The fold
 
-The pane is hinged along the bottom edge of the display and folds *away* from
+The pane is hinged at the foot of the display and folds *away* from
 you, carrying the picture with it — the way a lid closes, not the way a page
 lifts. The hinge stays pinned at full width while everything above it
 foreshortens and converges, so the picture collapses toward the hinge line
@@ -54,9 +47,9 @@ instead of spreading. Three things follow, and together they are the whole
 effect.
 
 **The gap drives the frost.** The glass still meets the display at the hinge and
-lifts further away toward its free edge, so the gap is nothing at the bottom and
-widest at the top. Frost follows the gap: the bottom of your screen stays clear
-while the top goes milky. Hold frosted glass against text and you can read it;
+lifts further away toward its free edge, so there is no gap at all along the
+hinge and the most of it at the top. Frost follows the gap, so the foot of the screen stays legible
+while everything above it turns to milk. Hold frosted glass against text and you can read it;
 lift it away and you cannot.
 
 **What it lifts off has nothing left to show.** The picture has gone with the
@@ -68,9 +61,9 @@ so the glass darkens along with the gap.
 
 <table>
 <tr>
-<td width="33%"><img src="docs/images/fold-rest.png" alt=""></td>
-<td width="33%"><img src="docs/images/fold-mid.png" alt=""></td>
-<td width="33%"><img src="docs/images/fold-closing.png" alt=""></td>
+<td width="33%"><img src="docs/readme/fold-rest.png" alt=""></td>
+<td width="33%"><img src="docs/readme/fold-mid.png" alt=""></td>
+<td width="33%"><img src="docs/readme/fold-closing.png" alt=""></td>
 </tr>
 <tr>
 <td align="center"><strong>100°</strong><br><sub>above the engage angle — nothing<br>renders, capture is off</sub></td>
@@ -139,9 +132,9 @@ only the native slice — it's roughly ten times quicker.
 > Remove it any time with `security delete-keychain frostfold-signing.keychain`.
 
 > [!IMPORTANT]
-> The app isn't notarised by Apple, so the first launch of a copy you didn't
-> build yourself needs **right-click → Open** once, or System Settings →
-> Privacy & Security → *Open Anyway*. After that it opens normally.
+> This app has not been through Apple's notary service. A copy you did not
+> compile yourself therefore needs **right-click → Open** once, or System
+> Settings → Privacy & Security → *Open Anyway*. It opens normally thereafter.
 
 ## Running it
 
@@ -164,8 +157,8 @@ open the Login Items pane.
 
 ## Permission
 
-FrostFold needs **Screen Recording**, and it is not optional — the glass is
-built out of your live display, so there is nothing to render without it.
+FrostFold cannot work without **Screen Recording**. The glass is assembled from
+whatever the screen is showing, so denying it leaves nothing to draw.
 
 macOS asks once, on first launch, with its own prompt. Allow it and FrostFold
 carries straight on — and with the signing identity above in place, it won't
@@ -201,7 +194,7 @@ closing the lid a hundred times.
 | **Hinge sensitivity** | Where in the lid's travel the fold does its work. Low holds off until the lid is well down and then gathers; high rises the moment the lid moves. |
 | **Minimum movement** | Deadband, in degrees. Below this the pane holds still, so a lid parked part-way open doesn't shimmer on sensor noise. |
 | **Engages at** | The lid angle at which the fold starts, 85° by default — a little past perpendicular, so normal use never triggers it. Above this angle nothing renders and capture is off. |
-| **Maximum fold** | How far the pane lifts off the display once the fold is fully in — which is what sets the gap, and so the frost. |
+| **Maximum fold** | How far back the pane tips once the fold is complete, which is what sets the gap and therefore the frost. |
 | **Stationary frame rate** | 15 / 30 / 60 / 90 / 120 FPS. Only applies while the lid is still. |
 
 The fold is normalised over the span from the engage angle down to roughly shut,
@@ -240,8 +233,9 @@ as haze sitting on top of a still-sharp picture; walking a pyramid genuinely
 defocuses, which is what a diffuser does. Grain is keyed to pane-local
 coordinates, so it lives in the material and travels with it.
 
-There is no specular term anywhere in the shader. Etched glass scatters light;
-it does not reflect it.
+There is no specular term anywhere in the shader. Etching a surface makes it
+scatter what passes through it, not mirror what falls on it, so a highlight would
+be the wrong kind of light entirely.
 
 ## Battery
 
@@ -274,10 +268,13 @@ code of any kind. Settings live in `UserDefaults`.
 dist/FrostFold.app/Contents/MacOS/FrostFold --selftest
 
 # Render the pane over a still image at a range of lid angles.
-Scripts/filmstrip.sh --input shot.png --out docs/images
+Scripts/filmstrip.sh --input shot.png --out docs/readme
 
 # Redraw the app icon and repack Resources/FrostFold.icns.
 Scripts/icon.sh
+
+# Redraw docs/readme/banner.svg, with DM Sans embedded.
+python3 Tools/banner/make.py
 
 # Create the self-signed code-signing identity (once).
 Scripts/signing-identity.sh
@@ -306,6 +303,7 @@ Sources/FrostFold/
   SelfTest.swift         --selftest
 Tools/filmstrip/         still-image renderer
 Tools/icon/              draws the app icon
+Tools/banner/            draws the README banner
 Tests/FrostFoldTests/    the fold's arithmetic, and regressions for two
                          bugs that a still image could not have caught
 Scripts/                 bundle.sh, filmstrip.sh, icon.sh, signing-identity.sh

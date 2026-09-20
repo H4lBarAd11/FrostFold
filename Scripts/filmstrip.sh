@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Renders the pane over a still image at a range of lid angles.
-#   Scripts/filmstrip.sh --input shot.png --out docs/images --mode both
+#   Scripts/filmstrip.sh --input shot.png --out docs/readme
 set -euo pipefail
 cd "$(dirname "$0")/.."
 

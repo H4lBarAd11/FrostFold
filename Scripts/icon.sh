@@ -10,7 +10,7 @@ swiftc -O Tools/icon/main.swift -o "$WORK/drawicon"
 "$WORK/drawicon" "$WORK"
 
 iconutil -c icns "$WORK/FrostFold.iconset" -o Resources/FrostFold.icns
-mkdir -p docs/images
-cp "$WORK/icon.png" docs/images/icon.png
+mkdir -p docs/readme
+cp "$WORK/icon.png" docs/readme/icon.png
 
 echo "Resources/FrostFold.icns  ($(du -h Resources/FrostFold.icns | cut -f1))"
