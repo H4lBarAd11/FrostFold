@@ -28,6 +28,7 @@ if CommandLine.arguments.contains("--help") {
       --out    <dir>        output directory (default: ./filmstrip)
       --mode   lift|seethrough|both   (default: both)
       --angles 125,100,75,50,25,8     lid angles in degrees
+      --clean               drop the alignment grid from the synthetic desktop
     """)
     exit(0)
 }
@@ -40,6 +41,8 @@ let angles = (argument("--angles") ?? "125,100,75,50,25,8")
 try? FileManager.default.createDirectory(atPath: outDir, withIntermediateDirectories: true)
 
 // MARK: - Background
+
+let clean = CommandLine.arguments.contains("--clean")
 
 func syntheticDesktop(width: Int, height: Int) -> CGImage {
     let cs = CGColorSpaceCreateDeviceRGB()
@@ -72,7 +75,9 @@ func syntheticDesktop(width: Int, height: Int) -> CGImage {
     window(CGRect(x: 780, y: 90, width: 700, height: 520),
            CGColor(red: 0.9, green: 0.3, blue: 0.4, alpha: 1))
 
-    // A fine grid makes any perspective error obvious at a glance.
+    // A fine grid makes any perspective error obvious at a glance — useful when
+    // tuning the shader, noise when producing a presentable still.
+    guard !clean else { return ctx.makeImage()! }
     ctx.setStrokeColor(CGColor(gray: 1, alpha: 0.28)); ctx.setLineWidth(1)
     for x in stride(from: 0, through: width, by: 50) {
         ctx.move(to: CGPoint(x: x, y: 0)); ctx.addLine(to: CGPoint(x: x, y: height))

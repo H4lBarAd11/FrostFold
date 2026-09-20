@@ -1,29 +1,77 @@
+<div align="center">
+
+<img src="docs/images/icon.svg" width="104" alt="">
+
 # FrostFold
 
-A pane of frosted glass, hinged along the bottom edge of your MacBook's display,
-that tracks the lid-angle sensor in real time. Close the lid slowly and the
-glass leans with it. Stop halfway and it holds there.
+**A pane of frosted glass, hinged along the bottom edge of your MacBook's display.**
 
-It is a cosmetic effect and nothing else. Menu-bar app, no dock icon, no
-account, no network.
+It reads the lid-angle sensor directly. Close the lid slowly and the glass leans with it.<br>
+Stop halfway and it holds there.
 
-> No screenshots are committed here on purpose — a still of your own desktop
-> shows the effect far better than a synthetic one. Take a screenshot and run
-> `Scripts/filmstrip.sh --input shot.png --out docs/images` to generate them.
+<p>
+  <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-1c1c1e?style=flat-square&logo=apple&logoColor=white">
+  <img alt="Swift 5.9" src="https://img.shields.io/badge/Swift-5.9-f05138?style=flat-square&logo=swift&logoColor=white">
+  <img alt="Metal" src="https://img.shields.io/badge/Renderer-Metal-8e5cf7?style=flat-square">
+  <img alt="No network" src="https://img.shields.io/badge/Network-none-2ea043?style=flat-square">
+  <img alt="MIT licence" src="https://img.shields.io/badge/Licence-MIT-0969da?style=flat-square">
+</p>
+
+<img src="docs/images/hero.png" width="820" alt="The frosted pane lifted off the desktop, leaning toward the viewer">
+
+<sub>Stills are rendered from a synthetic desktop so none of mine ends up in the repo.<br>
+Regenerate them from your own screenshot: <code>Scripts/filmstrip.sh --input shot.png --out docs/images</code></sub>
+
+</div>
+
+---
+
+FrostFold is a cosmetic effect and nothing else. Menu-bar app, no dock icon, no
+account, no licence key, no network code of any kind.
+
+## The fold
+
+The pane lies flat and invisible while the lid is open. As the lid comes down it
+lifts, leans and foreshortens — driven by the sensor, not by a timed animation.
+
+<table>
+<tr>
+<td width="33%"><img src="docs/images/fold-rest.png" alt=""></td>
+<td width="33%"><img src="docs/images/fold-mid.png" alt=""></td>
+<td width="33%"><img src="docs/images/fold-closing.png" alt=""></td>
+</tr>
+<tr>
+<td align="center"><strong>125°</strong><br><sub>at rest — nothing renders,<br>capture is off</sub></td>
+<td align="center"><strong>70°</strong><br><sub>lifting</sub></td>
+<td align="center"><strong>22°</strong><br><sub>nearly shut</sub></td>
+</tr>
+</table>
+
+### Two kinds of glass
+
+<table>
+<tr>
+<td width="50%"><img src="docs/images/mode-lift.png" alt=""></td>
+<td width="50%"><img src="docs/images/mode-seethrough.png" alt=""></td>
+</tr>
+<tr>
+<td align="center"><strong>Lift the image</strong><br><sub>the pane carries a copy of the display,<br>so the picture lifts and leans with the glass</sub></td>
+<td align="center"><strong>See through</strong><br><sub>the pane is empty glass — you see the real<br>display through it, blurred and refracted</sub></td>
+</tr>
+</table>
 
 ## Requirements
 
-- macOS 14 Sonoma or later
-- A MacBook with a **continuous lid-angle sensor**. Apple silicon Airs (M2 and
-  later) and 14"/16" Pros have one; the M1 Air, the 13" M1 Pro and every
-  desktop Mac do not.
-- Xcode Command Line Tools (`xcode-select --install`). Full Xcode is *not*
-  required — the Metal shaders are compiled at runtime.
+| | |
+|---|---|
+| **OS** | macOS 14 Sonoma or later |
+| **Hardware** | A MacBook with a **continuous lid-angle sensor**. Apple silicon Airs (M2 and later) and 14"/16" Pros have one; the M1 Air, the 13" M1 Pro and every desktop Mac do not. |
+| **Toolchain** | Xcode Command Line Tools (`xcode-select --install`). Full Xcode is **not** required — the Metal shaders are compiled at runtime. |
 
-Not sure whether your Mac qualifies? Build it and run `--selftest` (below); it
-tells you in one line.
+Not sure whether your Mac qualifies? Build it and run `--selftest`; it tells you
+in one line.
 
-## Build
+## Install
 
 ```sh
 Scripts/bundle.sh              # native slice, for iterating
@@ -33,9 +81,12 @@ open dist/FrostFold.app
 
 That compiles a release build, assembles `dist/FrostFold.app` and ad-hoc signs
 it. Use `--universal` for anything you publish: the 2019-and-later Intel 16"
-MacBook Pros have the sensor too. The signature matters: macOS remembers the Screen Recording grant against
-the bundle's identity, and an unsigned bundle loses the permission on every
-rebuild.
+MacBook Pros have the sensor too.
+
+> [!NOTE]
+> The ad-hoc signature is not cosmetic. macOS remembers the Screen Recording
+> grant against the bundle's identity, and an unsigned bundle loses the
+> permission on every rebuild.
 
 ## Permission
 
@@ -53,17 +104,17 @@ Open them from the menu-bar item. **Preview…** opens a window with a manual
 scrubber, so you can dial the effect in without opening and closing the lid a
 hundred times.
 
-### Material
+**Material**
 
 | | |
 |---|---|
 | **Intensity** | Low / Medium / High. Drives how far the glass scatters and how opaque it sits. |
-| **Glass** | *Lift the image* carries a copy of the display on the pane, so the picture lifts and leans with the glass. *See through* leaves the pane empty — you see the real display through it, blurred and refracted by the tilt. |
+| **Glass** | *Lift the image* or *See through* — the two modes shown above. |
 | **Perspective** | How strongly the pane foreshortens as it leans toward you. |
 | **Edge softness** | Feathering where the glass meets the display. |
 | **Corner radius** | Rounding of the pane's corners. |
 
-### Motion
+**Motion**
 
 | | |
 |---|---|
@@ -79,12 +130,12 @@ hundred times.
 **The sensor.** MacBooks expose the hinge as an Apple HID sensor device (`las`,
 usage page `0x20`, usage `0x8A`). Two feature reports carry the angle: report 7
 is a little-endian `UInt32` in hundredths of a degree, report 1 a `UInt16` in
-whole degrees. FrostFold prefers 7 and falls back to 1. It polls at 120 Hz
-while the lid is moving and drops to the stationary rate once it settles.
+whole degrees. FrostFold prefers 7 and falls back to 1. It polls at 120 Hz while
+the lid is moving and drops to the stationary rate once it settles.
 
 **The capture.** A ScreenCaptureKit stream over the built-in display, with
 FrostFold's own windows excluded from the content filter (and marked
-`sharingType = .none`) so the pane can't capture its own output and spiral.
+`sharingType = .none`) so the pane cannot capture its own output and spiral.
 Frames arrive as `IOSurface`-backed pixel buffers and become Metal textures
 without a copy.
 
@@ -103,16 +154,16 @@ it does not reflect it.
 
 ## Battery
 
-Capture runs only while the pane has something to show. Above the resting
-angle the stream is torn down entirely and the overlay clears to fully
-transparent — what is left is a feature-report read at the stationary rate,
-which is a few dozen bytes over the HID transport.
+Capture runs only while the pane has something to show. Above the resting angle
+the stream is torn down entirely and the overlay clears to fully transparent —
+what is left is a feature-report read at the stationary rate, which is a few
+dozen bytes over the HID transport.
 
 ## Privacy
 
-Captured frames go from ScreenCaptureKit to the GPU and nowhere else. Nothing
-is written to disk, nothing is sent anywhere, there is no analytics and no
-network code of any kind. Settings live in `UserDefaults`.
+Captured frames go from ScreenCaptureKit to the GPU and nowhere else. Nothing is
+written to disk, nothing is sent anywhere, there is no analytics and no network
+code of any kind. Settings live in `UserDefaults`.
 
 ## Tools
 
@@ -124,10 +175,11 @@ dist/FrostFold.app/Contents/MacOS/FrostFold --selftest
 Scripts/filmstrip.sh --input shot.png --out docs/images --mode both
 ```
 
-`filmstrip` is how the images in this README are produced, and it's the quickest
-way to judge a shader change without touching the lid.
+`filmstrip` produces the images in this README, and it's the quickest way to
+judge a shader change without touching the lid.
 
-## Layout
+<details>
+<summary><strong>Project layout</strong></summary>
 
 ```
 Sources/FrostFold/
@@ -145,12 +197,15 @@ Tools/filmstrip/         still-image renderer
 Scripts/                 bundle.sh, filmstrip.sh
 ```
 
+</details>
+
 ## Notes
 
 This is an independent, clean-room implementation of an idea — a lid-angle-driven
 frosted fold — written from a description of the behaviour, not from anyone
 else's source, assets or branding. It is not affiliated with or derived from any
-other application.
+other application. The name deliberately avoids Apple trademarks; "MacBook" and
+"Mac" appear here only as hardware compatibility statements.
 
 ## Licence
 
