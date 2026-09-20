@@ -171,7 +171,7 @@ for angle in angles {
     u.grainAmount    = 1
     u.aspect         = Float(W) / Float(H)
     u.grainScale     = SIMD2(Float(W) / 7, Float(H) / 7)
-    u.opacity        = Float(smoothstep(0, 0.04, fold))
+    u.opacity        = Float(smoothstep(0, 0.012, fold))
     u.dim            = Float(settings.dimming)
     let camera = Double(u.cameraDistance)
     let topY = 2 * cos(tilt) - 1

@@ -261,9 +261,14 @@ final class EffectController: ObservableObject {
         u.grainAmount = 1.0
         u.aspect = view.aspect
         u.grainScale = SIMD2(Float(max(1, size.width / 7)), Float(max(1, size.height / 7)))
-        // Ease the whole thing in rather than switching it on. At 0.04 the
-        // blackout arrived effectively as a step.
-        u.opacity = Float(smoothstep(0, 0.14, fold01))
+        // The pane must reach full opacity almost immediately. The fill behind
+        // it is opaque by the time a few points are uncovered, so any lingering
+        // transparency in the pane lets that black through across the whole
+        // display — which read as the screen flashing dark at the onset. At
+        // this point in the fold the pane is still aligned with the display it
+        // was captured from, so drawing it opaque is invisible; the short ramp
+        // only avoids a hard switch at the threshold.
+        u.opacity = Float(smoothstep(0, 0.012, fold01))
         u.dim = Float(s.dimming)
         // How much of the display the converged pane has actually uncovered,
         // as a fraction of its height. Tie the fill to that rather than to the
