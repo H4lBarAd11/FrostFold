@@ -106,10 +106,17 @@ the icon and ad-hoc signs it. Drop `--universal` while you're iterating to build
 only the native slice — it's roughly ten times quicker.
 
 > [!NOTE]
-> Ad-hoc signing gives the bundle a valid signature but not a *stable* one: the
-> code hash changes with every build, so macOS treats each rebuild as a new app
-> and asks for Screen Recording again. That's normal while you're working on it.
-> A real Developer ID signature is what makes the grant stick across builds.
+> An ad-hoc signature has no identity of its own, so the designated requirement
+> macOS records is literally the code hash:
+> `designated => cdhash H"9ef21410…"`. Rebuilding unchanged source reproduces
+> the same hash and the Screen Recording grant survives — but **any** source
+> change produces a new hash, and macOS then treats it as a different app and
+> asks again. Expect a prompt after each code change while developing.
+>
+> The same applies to releases: every version you ship has a new hash, so users
+> re-grant on every update. Signing with a stable identity — a self-signed
+> certificate, or a Developer ID — makes the requirement key on the certificate
+> instead, and the grant survives updates.
 
 > [!IMPORTANT]
 > The app isn't notarised by Apple, so the first launch of a copy you didn't
