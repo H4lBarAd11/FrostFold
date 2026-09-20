@@ -18,9 +18,9 @@ if [ "${1:-}" = "--universal" ]; then
 fi
 
 echo "==> Building (release, $LABEL)"
-swift build -c release "${ARCH_ARGS[@]}"
+swift build -c release ${ARCH_ARGS[@]+"${ARCH_ARGS[@]}"}
 
-BIN="$(swift build -c release "${ARCH_ARGS[@]}" --show-bin-path)/FrostFold"
+BIN="$(swift build -c release ${ARCH_ARGS[@]+"${ARCH_ARGS[@]}"} --show-bin-path)/FrostFold"
 [ -x "$BIN" ] || { echo "error: binary not found at $BIN" >&2; exit 1; }
 
 echo "==> Assembling $APP"
@@ -36,11 +36,24 @@ else
 fi
 printf 'APPL????' > "$APP/Contents/PkgInfo"
 
-# An ad-hoc signature gives the bundle a stable identity, which is what the
-# Screen Recording permission is remembered against. Without it macOS forgets
-# the grant on every rebuild.
-echo "==> Signing (ad-hoc)"
-codesign --force --sign - --timestamp=none "$APP"
+# Prefer the self-signed identity if it exists: it makes the designated
+# requirement key on the certificate rather than the code hash, so the Screen
+# Recording grant survives source changes and, for anyone you ship to, updates.
+# Run Scripts/signing-identity.sh once to create it.
+SIGN_KEYCHAIN="$HOME/Library/Keychains/frostfold-signing.keychain-db"
+SIGN_IDENTITY="FrostFold Self-Signed"
+
+if [ -f "$SIGN_KEYCHAIN" ] && \
+   security find-identity -p codesigning "$SIGN_KEYCHAIN" 2>/dev/null | grep -qF "$SIGN_IDENTITY"; then
+    echo "==> Signing as \"$SIGN_IDENTITY\""
+    security unlock-keychain -p frostfold "$SIGN_KEYCHAIN"
+    codesign --force --sign "$SIGN_IDENTITY" --keychain "$SIGN_KEYCHAIN" \
+             --timestamp=none "$APP"
+else
+    echo "==> Signing (ad-hoc — run Scripts/signing-identity.sh to stop macOS"
+    echo "    re-asking for Screen Recording after every source change)"
+    codesign --force --sign - --timestamp=none "$APP"
+fi
 codesign --verify --verbose=2 "$APP" 2>&1 | sed 's/^/    /'
 
 # The bundle is rebuilt in place, so LaunchServices ends up holding a record

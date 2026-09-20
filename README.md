@@ -96,6 +96,7 @@ in one line.
 
 ```sh
 git clone <your-fork> && cd FrostFold
+Scripts/signing-identity.sh        # once — see the note below
 Scripts/bundle.sh --universal      # arm64 + x86_64
 cp -R dist/FrostFold.app /Applications/
 open -a FrostFold
@@ -105,18 +106,32 @@ open -a FrostFold
 the icon and ad-hoc signs it. Drop `--universal` while you're iterating to build
 only the native slice — it's roughly ten times quicker.
 
-> [!NOTE]
-> An ad-hoc signature has no identity of its own, so the designated requirement
-> macOS records is literally the code hash:
-> `designated => cdhash H"9ef21410…"`. Rebuilding unchanged source reproduces
-> the same hash and the Screen Recording grant survives — but **any** source
-> change produces a new hash, and macOS then treats it as a different app and
-> asks again. Expect a prompt after each code change while developing.
+> [!IMPORTANT]
+> **Run `Scripts/signing-identity.sh` once.** An ad-hoc signature has no identity
+> of its own, so the requirement macOS records for the Screen Recording grant is
+> the code hash itself:
 >
-> The same applies to releases: every version you ship has a new hash, so users
-> re-grant on every update. Signing with a stable identity — a self-signed
-> certificate, or a Developer ID — makes the requirement key on the certificate
-> instead, and the grant survives updates.
+> ```
+> designated => cdhash H"9ef21410…"
+> ```
+>
+> Every build with changed source gets a new hash, so macOS treats it as a
+> different app and asks for the permission again — and every release you ship
+> makes your users re-grant too.
+>
+> The script creates a self-signed certificate, and the requirement becomes:
+>
+> ```
+> designated => identifier "io.github.frostfold" and certificate root = H"8aae…"
+> ```
+>
+> No hash in it, so no rebuild can invalidate it. `bundle.sh` picks the identity
+> up automatically and falls back to ad-hoc if it isn't there. Switching to it
+> changes the app's identity once, so expect one final prompt.
+>
+> It lives in its own keychain, not your login keychain — the login keychain
+> gates key access behind an interactive dialog that a script can't answer.
+> Remove it any time with `security delete-keychain frostfold-signing.keychain`.
 
 > [!IMPORTANT]
 > The app isn't notarised by Apple, so the first launch of a copy you didn't
@@ -147,8 +162,8 @@ FrostFold needs **Screen Recording**, and it is not optional — the glass is
 built out of your live display, so there is nothing to render without it.
 
 macOS asks once, on first launch, with its own prompt. Allow it and FrostFold
-carries straight on. It will ask again after a rebuild, for the reason in the
-note above.
+carries straight on — and with the signing identity above in place, it won't
+ask again on later builds.
 
 If you dismissed that prompt, macOS won't ask a second time — FrostFold will say
 so and offer to open Privacy & Security → Screen Recording, where you can switch
@@ -246,6 +261,9 @@ Scripts/filmstrip.sh --input shot.png --out docs/images
 
 # Redraw the app icon and repack Resources/FrostFold.icns.
 Scripts/icon.sh
+
+# Create the self-signed code-signing identity (once).
+Scripts/signing-identity.sh
 ```
 
 `filmstrip` produces the images in this README, and it's the quickest way to
@@ -271,7 +289,7 @@ Sources/FrostFold/
   SelfTest.swift         --selftest
 Tools/filmstrip/         still-image renderer
 Tools/icon/              draws the app icon
-Scripts/                 bundle.sh, filmstrip.sh, icon.sh
+Scripts/                 bundle.sh, filmstrip.sh, icon.sh, signing-identity.sh
 ```
 
 </details>
