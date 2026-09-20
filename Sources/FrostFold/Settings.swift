@@ -34,11 +34,13 @@ final class Settings: ObservableObject {
     @Published var hingeSensitivity: Double      { didSet { persist(hingeSensitivity, "hingeSensitivity") } }
     @Published var movementThreshold: Double     { didSet { persist(movementThreshold, "movementThreshold") } }
     @Published var stationaryFPS: StationaryFPS  { didSet { persist(stationaryFPS.rawValue, "stationaryFPS") } }
-    @Published var showAngleInMenuBar: Bool      { didSet { persist(showAngleInMenuBar, "showAngleInMenuBar") } }
     /// The lid angle at which the fold engages. Above it nothing renders.
-    @Published var restAngle: Double             { didSet { persist(restAngle, "restAngle") } }
+    @Published var restAngle: Double             { didSet { persist(restAngle, "engageAngle") } }
     /// How far the pane tilts off the display once the fold is fully in.
     @Published var maxFold: Double               { didSet { persist(maxFold, "maxFold") } }
+
+    /// The lid is effectively shut here; the display sleeps around this point.
+    let shutAngle: Double = 6
 
     private var loading = true
     private let d = UserDefaults.standard
@@ -61,8 +63,7 @@ final class Settings: ObservableObject {
         hingeSensitivity   = dbl("hingeSensitivity", 0.7)
         movementThreshold  = dbl("movementThreshold", 1.0)
         stationaryFPS      = StationaryFPS(rawValue: store.object(forKey: "stationaryFPS") as? Int ?? 30) ?? .f30
-        showAngleInMenuBar = bool("showAngleInMenuBar", false)
-        restAngle          = dbl("restAngle", 110)
+        restAngle          = dbl("engageAngle", 85)
         maxFold            = dbl("maxFold", 68)
         loading = false
     }
@@ -74,7 +75,7 @@ final class Settings: ObservableObject {
 
     func resetToDefaults() {
         for k in ["intensity", "perspective", "edgeSoftness", "dimming", "cornerRadiusPt", "responsiveness",
-                  "hingeSensitivity", "movementThreshold", "stationaryFPS", "restAngle", "maxFold"] {
+                  "hingeSensitivity", "movementThreshold", "stationaryFPS", "engageAngle", "maxFold"] {
             d.removeObject(forKey: k)
         }
         intensity = .medium;        perspective = 0.5
@@ -82,14 +83,17 @@ final class Settings: ObservableObject {
         cornerRadius = 33
         responsiveness = 0.3;       hingeSensitivity = 0.7
         movementThreshold = 1.0;    stationaryFPS = .f30
-        restAngle = 110;            maxFold = 68
+        restAngle = 85;             maxFold = 68
     }
 
     /// Maps a raw lid angle onto 0...1 fold, applying the hinge-sensitivity curve.
     /// 0 = pane flat against the display, nothing to see; 1 = fully lifted.
     func fold(forLidAngle angle: Double) -> Double {
-        guard restAngle > 1 else { return 0 }
-        let t = max(0, min(1, (restAngle - angle) / restAngle))
+        guard restAngle > shutAngle else { return 0 }
+        // Normalised over the span the lid actually travels through, not over
+        // the whole 0...engage range: a lid never reaches 0°, and treating it
+        // as though it might leaves the fold unfinished as the lid shuts.
+        let t = max(0, min(1, (restAngle - angle) / (restAngle - shutAngle)))
         // Sensitivity biases the curve: low means most of the travel happens
         // near shut, high means the fold rises as soon as the lid moves.
         let gamma = 2.6 - 2.2 * hingeSensitivity   // 2.6 (lazy) ... 0.4 (eager)

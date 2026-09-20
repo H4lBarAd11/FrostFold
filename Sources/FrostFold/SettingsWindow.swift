@@ -4,6 +4,7 @@ import AppKit
 struct SettingsView: View {
     @ObservedObject var settings: Settings
     @ObservedObject var controller: EffectController
+    var openPreview: () -> Void = {}
 
     var body: some View {
         Form {
@@ -44,14 +45,27 @@ struct SettingsView: View {
                     ForEach(StationaryFPS.allCases) { Text($0.label).tag($0) }
                 }
                 .pickerStyle(.segmented)
-                Toggle("Show lid angle in the menu bar", isOn: $settings.showAngleInMenuBar)
             }
 
             Section {
-                HStack(alignment: .firstTextBaseline) {
-                    statusLine
-                    Spacer()
-                    Button("Reset") { settings.resetToDefaults() }
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(alignment: .firstTextBaseline) {
+                        statusLine
+                        Spacer()
+                        Button("Reset") { settings.resetToDefaults() }
+                    }
+                    Divider()
+                    HStack {
+                        Toggle("Enabled", isOn: $settings.enabled)
+                            .toggleStyle(.switch)
+                        Spacer()
+                        Button("Preview…") { openPreview() }
+                        // FrostFold has no menu bar item, so this is the way out.
+                        Button("Quit FrostFold") { NSApp.terminate(nil) }
+                    }
+                    Text("FrostFold runs in the background. Launch it again to reopen these settings.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
         }
@@ -108,8 +122,8 @@ struct SettingsView: View {
 }
 
 final class SettingsWindowController: NSWindowController {
-    init(controller: EffectController) {
-        let root = SettingsView(settings: .shared, controller: controller)
+    init(controller: EffectController, openPreview: @escaping () -> Void) {
+        let root = SettingsView(settings: .shared, controller: controller, openPreview: openPreview)
         let hosting = NSHostingController(rootView: root)
         let window = NSWindow(contentViewController: hosting)
         window.title = "FrostFold Settings"

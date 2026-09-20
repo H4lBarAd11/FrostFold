@@ -28,6 +28,12 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN" "$APP/Contents/MacOS/FrostFold"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
+
+if [ -f Resources/FrostFold.icns ]; then
+    cp Resources/FrostFold.icns "$APP/Contents/Resources/FrostFold.icns"
+else
+    echo "    note: no icon yet — run Scripts/icon.sh" >&2
+fi
 printf 'APPL????' > "$APP/Contents/PkgInfo"
 
 # An ad-hoc signature gives the bundle a stable identity, which is what the
@@ -36,6 +42,12 @@ printf 'APPL????' > "$APP/Contents/PkgInfo"
 echo "==> Signing (ad-hoc)"
 codesign --force --sign - --timestamp=none "$APP"
 codesign --verify --verbose=2 "$APP" 2>&1 | sed 's/^/    /'
+
+# The bundle is rebuilt in place, so LaunchServices ends up holding a record
+# for an inode that no longer exists and `open` quietly resolves to nothing.
+# Re-registering the fresh bundle keeps `open -a FrostFold` working.
+LSREGISTER=/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
+[ -x "$LSREGISTER" ] && "$LSREGISTER" -f "$APP" || true
 
 echo
 echo "Built $APP  ($(lipo -archs "$APP/Contents/MacOS/FrostFold"), $(du -sh "$APP" | cut -f1))"

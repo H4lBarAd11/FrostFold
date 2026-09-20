@@ -1,19 +1,36 @@
 import AppKit
 import Combine
 
+/// A second launch asks the running copy for a window by leaving a note, then
+/// reopening the app. Distributed notifications looked tidier but are not
+/// reliably delivered to a background-only process; a reopen always lands.
+enum PendingWindow {
+    private static let url = URL(fileURLWithPath: NSTemporaryDirectory())
+        .appendingPathComponent("io.github.frostfold.pending")
+
+    static func request(_ value: String) {
+        try? value.write(to: url, atomically: true, encoding: .utf8)
+    }
+
+    /// Reads and clears the note, so it is acted on exactly once.
+    static func take() -> String? {
+        guard let value = try? String(contentsOf: url, encoding: .utf8) else { return nil }
+        try? FileManager.default.removeItem(at: url)
+        return value.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+}
+
 final class AppDelegate: NSObject, NSApplicationDelegate {
 
-    private var statusItem: NSStatusItem!
     private var controller: EffectController?
     private var settingsWindow: SettingsWindowController?
     private var previewWindow: PreviewWindowController?
     private var cancellables = Set<AnyCancellable>()
-
-    private let enabledItem = NSMenuItem(title: "Enabled", action: #selector(toggleEnabled), keyEquivalent: "")
-    private let angleItem = NSMenuItem(title: "Lid angle: —", action: nil, keyEquivalent: "")
-    private let statusLine = NSMenuItem(title: "", action: nil, keyEquivalent: "")
+    private var requestTimer: Timer?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // No dock icon (LSUIElement) and no status item: FrostFold runs in the
+        // background and is reached by launching it again.
         NSApp.setActivationPolicy(.accessory)
 
         guard let controller = EffectController() else {
@@ -22,16 +39,53 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         self.controller = controller
 
-        buildStatusItem()
-
         guard requireScreenRecording() else { return }
 
         controller.start()
-        observe(controller)
+
+        // Anything left over from a previous run is stale; don't act on it.
+        _ = PendingWindow.take()
+        watchForRequests()
+
+        controller.$statusMessage
+            .receive(on: RunLoop.main)
+            .sink { [weak self] message in
+                // A problem the user cannot otherwise see, because there is no
+                // menu bar item to show it in.
+                if let message { self?.report(message) }
+            }
+            .store(in: &cancellables)
+
+        // First run has nothing on screen to discover, so show the settings
+        // once and let the user find everything from there.
+        if !UserDefaults.standard.bool(forKey: "hasLaunchedBefore") {
+            UserDefaults.standard.set(true, forKey: "hasLaunchedBefore")
+            openSettings()
+        }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        requestTimer?.invalidate()
         controller?.stop()
+    }
+
+    /// A second launch leaves a note rather than talking to us directly, so we
+    /// look for one. A stat twice a second costs nothing next to the renderer.
+    private func watchForRequests() {
+        requestTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
+            switch PendingWindow.take() {
+            case "preview":  self?.openPreview()
+            case "settings": self?.openSettings()
+            default: break
+            }
+        }
+    }
+
+    /// Launching FrostFold while it is already running brings up a window
+    /// rather than starting a second copy.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
+        if PendingWindow.take() == "preview" { openPreview() } else { openSettings() }
+        return true
     }
 
     // MARK: - Permission
@@ -41,16 +95,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func requireScreenRecording() -> Bool {
         if ScreenCapturer.hasPermission() { return true }
 
-        ScreenCapturer.requestPermission()
+        // This call *is* the system prompt. Putting our own dialog in front of
+        // it only makes the user dismiss the same question twice.
+        if ScreenCapturer.requestPermission() { return true }
 
+        // We get here either because they declined, or because macOS already
+        // had an answer on file and showed nothing at all — and that second
+        // case is the only one where a word from us actually helps.
         let alert = NSAlert()
         alert.messageText = "FrostFold needs Screen Recording"
         alert.informativeText = """
-            The frosted pane is built out of your live display, so macOS \
-            requires Screen Recording permission.
+            The frosted pane is built out of your live display, so there is \
+            nothing to render without it.
 
-            Enable FrostFold under Privacy & Security → Screen Recording, \
-            then launch it again.
+            Turn FrostFold on under Privacy & Security → Screen Recording, \
+            then start it again.
             """
         alert.alertStyle = .informational
         alert.addButton(withTitle: "Open Privacy Settings")
@@ -65,6 +124,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return false
     }
 
+    private func report(_ message: String) {
+        let alert = NSAlert()
+        alert.messageText = "FrostFold"
+        alert.informativeText = message
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "OK")
+        NSApp.activate(ignoringOtherApps: true)
+        alert.runModal()
+    }
+
     private func fatal(_ message: String) {
         let alert = NSAlert()
         alert.messageText = message
@@ -74,86 +143,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.terminate(nil)
     }
 
-    // MARK: - Menu bar
+    // MARK: - Windows
 
-    private func buildStatusItem() {
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        if let button = statusItem.button {
-            button.image = NSImage(systemSymbolName: "laptopcomputer",
-                                   accessibilityDescription: "FrostFold")
-            button.image?.isTemplate = true
-            button.imagePosition = .imageLeading
-        }
-
-        let menu = NSMenu()
-        enabledItem.target = self
-        enabledItem.state = Settings.shared.enabled ? .on : .off
-        menu.addItem(enabledItem)
-
-        angleItem.isEnabled = false
-        menu.addItem(angleItem)
-
-        statusLine.isEnabled = false
-        statusLine.isHidden = true
-        menu.addItem(statusLine)
-
-        menu.addItem(.separator())
-        menu.addItem(withTitle: "Preview…", action: #selector(openPreview), keyEquivalent: "p").target = self
-        menu.addItem(withTitle: "Settings…", action: #selector(openSettings), keyEquivalent: ",").target = self
-        menu.addItem(.separator())
-        menu.addItem(withTitle: "Quit FrostFold", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
-        statusItem.menu = menu
-    }
-
-    private func observe(_ controller: EffectController) {
-        // Menu bar text only needs to keep up with the eye, not the sensor.
-        controller.$angle
-            .throttle(for: .milliseconds(100), scheduler: RunLoop.main, latest: true)
-            .sink { [weak self] angle in
-                guard let self else { return }
-                self.angleItem.title = String(format: "Lid angle: %.1f°", angle)
-                if Settings.shared.showAngleInMenuBar {
-                    self.statusItem.button?.title = String(format: " %.0f°", angle)
-                }
-            }
-            .store(in: &cancellables)
-
-        controller.$statusMessage
-            .receive(on: RunLoop.main)
-            .sink { [weak self] message in
-                self?.statusLine.title = message ?? ""
-                self?.statusLine.isHidden = (message == nil)
-            }
-            .store(in: &cancellables)
-
-        Settings.shared.$showAngleInMenuBar
-            .receive(on: RunLoop.main)
-            .sink { [weak self] show in
-                if !show { self?.statusItem.button?.title = "" }
-            }
-            .store(in: &cancellables)
-
-        if !controller.sensorAvailable {
-            angleItem.title = "No lid-angle sensor"
-        }
-    }
-
-    // MARK: - Actions
-
-    @objc private func toggleEnabled() {
-        Settings.shared.enabled.toggle()
-        enabledItem.state = Settings.shared.enabled ? .on : .off
-    }
-
-    @objc private func openSettings() {
+    func openSettings() {
         guard let controller else { return }
         if settingsWindow == nil {
-            settingsWindow = SettingsWindowController(controller: controller)
+            settingsWindow = SettingsWindowController(controller: controller,
+                                                      openPreview: { [weak self] in self?.openPreview() })
         }
         settingsWindow?.present()
     }
 
-    @objc private func openPreview() {
+    func openPreview() {
         guard let controller else { return }
         if previewWindow == nil {
             previewWindow = PreviewWindowController(controller: controller)

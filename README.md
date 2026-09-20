@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/images/icon.svg" width="104" alt="">
+<img src="docs/images/icon.png" width="128" alt="">
 
 # FrostFold
 
@@ -27,8 +27,9 @@ Regenerate them from your own screenshot: <code>Scripts/filmstrip.sh --input sho
 
 ---
 
-FrostFold is a cosmetic effect and nothing else. Menu-bar app, no dock icon, no
-account, no licence key, no network code of any kind.
+FrostFold is a cosmetic effect and nothing else. It runs in the background with
+no dock icon and no menu bar item — no account, no licence key, and no network
+code of any kind.
 
 ## The fold
 
@@ -59,9 +60,9 @@ so the glass darkens along with the gap.
 <td width="33%"><img src="docs/images/fold-closing.png" alt=""></td>
 </tr>
 <tr>
-<td align="center"><strong>125°</strong><br><sub>above the engage angle — nothing<br>renders, capture is off</sub></td>
-<td align="center"><strong>85°</strong><br><sub>the gap opens at the free edge</sub></td>
-<td align="center"><strong>28°</strong><br><sub>collapsed toward the hinge,<br>blacked out above</sub></td>
+<td align="center"><strong>100°</strong><br><sub>above the engage angle — nothing<br>renders, capture is off</sub></td>
+<td align="center"><strong>62°</strong><br><sub>converging, the gap opening<br>at the free edge</sub></td>
+<td align="center"><strong>20°</strong><br><sub>collapsed toward the hinge,<br>blacked out above</sub></td>
 </tr>
 </table>
 
@@ -96,6 +97,24 @@ MacBook Pros have the sensor too.
 > grant against the bundle's identity, and an unsigned bundle loses the
 > permission on every rebuild.
 
+## Running it
+
+FrostFold has no dock icon and no menu bar item — it starts, sits in the
+background and waits for the lid. Launching it again doesn't start a second
+copy; it opens the settings of the one already running.
+
+```sh
+open -a FrostFold                                   # start it, or open settings
+dist/FrostFold.app/Contents/MacOS/FrostFold --quit  # stop it
+```
+
+`--settings`, `--preview`, `--quit` and `--selftest` all work on the binary
+inside the bundle. The settings window carries an Enabled switch, a Preview
+button and Quit, so you never need the command line to get back out.
+
+To start it with the Mac, add `FrostFold.app` under System Settings → General →
+Login Items.
+
 ## Permission
 
 FrostFold needs **Screen Recording**, and it is not optional — the glass is
@@ -108,9 +127,9 @@ The lid-angle sensor itself needs no permission at all.
 
 ## Settings
 
-Open them from the menu-bar item. **Preview…** opens a window with a manual
-scrubber, so you can dial the effect in without opening and closing the lid a
-hundred times.
+Launch FrostFold again to open them (`open -a FrostFold`). **Preview…** opens a
+window with a manual scrubber, so you can dial the effect in without opening and
+closing the lid a hundred times.
 
 **Material**
 
@@ -129,9 +148,12 @@ hundred times.
 | **Responsiveness** | Low trails the lid; high tracks it immediately. |
 | **Hinge sensitivity** | Where in the lid's travel the fold does most of its work. |
 | **Minimum movement** | Deadband, in degrees. Below this the pane holds still, so a lid parked part-way open doesn't shimmer on sensor noise. |
-| **Engages at** | The lid angle at which the fold starts. Above it the pane lies flat, nothing renders and capture is off. |
+| **Engages at** | The lid angle at which the fold starts, 85° by default — a little past perpendicular, so normal use never triggers it. Above this angle nothing renders and capture is off. |
 | **Maximum fold** | How far the pane lifts off the display once the fold is fully in — which is what sets the gap, and so the frost. |
 | **Stationary frame rate** | 15 / 30 / 60 / 90 / 120 FPS. Only applies while the lid is still. |
+
+The fold is normalised over the span from the engage angle down to roughly shut,
+so it always completes as the lid closes, whatever you set the engage angle to.
 
 ## How it works
 
@@ -190,6 +212,9 @@ dist/FrostFold.app/Contents/MacOS/FrostFold --selftest
 
 # Render the pane over a still image at a range of lid angles.
 Scripts/filmstrip.sh --input shot.png --out docs/images
+
+# Redraw the app icon and repack Resources/FrostFold.icns.
+Scripts/icon.sh
 ```
 
 `filmstrip` produces the images in this README, and it's the quickest way to
@@ -209,9 +234,11 @@ Sources/FrostFold/
   Settings.swift         UserDefaults-backed preferences
   SettingsWindow.swift   SwiftUI settings panel
   PreviewWindow.swift    preview with a manual scrubber
+  AppDelegate.swift      background lifecycle, second-launch signals
   SelfTest.swift         --selftest
 Tools/filmstrip/         still-image renderer
-Scripts/                 bundle.sh, filmstrip.sh
+Tools/icon/              draws the app icon
+Scripts/                 bundle.sh, filmstrip.sh, icon.sh
 ```
 
 </details>
