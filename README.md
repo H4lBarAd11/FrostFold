@@ -26,12 +26,14 @@ tells you in one line.
 ## Build
 
 ```sh
-Scripts/bundle.sh
+Scripts/bundle.sh              # native slice, for iterating
+Scripts/bundle.sh --universal  # arm64 + x86_64, for releases
 open dist/Clamshell.app
 ```
 
 That compiles a release build, assembles `dist/Clamshell.app` and ad-hoc signs
-it. The signature matters: macOS remembers the Screen Recording grant against
+it. Use `--universal` for anything you publish: the 2019-and-later Intel 16"
+MacBook Pros have the sensor too. The signature matters: macOS remembers the Screen Recording grant against
 the bundle's identity, and an unsigned bundle loses the permission on every
 rebuild.
 
