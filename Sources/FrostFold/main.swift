@@ -49,6 +49,15 @@ if arguments.contains("--quit") {
     exit(0)
 }
 
+// AppKit turns an uncaught exception into an immediate trap, and the crash
+// report keeps the backtrace but drops the reason. Log it before we go.
+NSSetUncaughtExceptionHandler { exception in
+    NSLog("FrostFold uncaught exception: %@ — %@\n%@",
+          exception.name.rawValue,
+          exception.reason ?? "(no reason)",
+          exception.callStackSymbols.prefix(12).joined(separator: "\n"))
+}
+
 let app = NSApplication.shared
 let delegate = AppDelegate()
 app.delegate = delegate

@@ -20,9 +20,16 @@ final class EffectController: ObservableObject {
     private var timer: DispatchSourceTimer?
     private var timerHz: Double = 0
 
-    /// Live sensor reading, published for the menu bar and settings UI.
-    @Published private(set) var angle: Double = 0
-    @Published private(set) var isMoving = false
+    /// Live sensor reading. Deliberately *not* published: it is reassigned on
+    /// every sample, and driving SwiftUI at sensor rate invalidates layout from
+    /// inside AppKit's display cycle, which throws.
+    private(set) var angle: Double = 0
+    private(set) var isMoving = false
+
+    /// The same reading, throttled to something an eye can follow, for the
+    /// settings panel to observe.
+    @Published private(set) var displayAngle: Double = 0
+    private var lastDisplayAngleUpdate: CFAbsoluteTime = 0
     @Published private(set) var sensorAvailable = false
     @Published var statusMessage: String?
 
@@ -55,6 +62,14 @@ final class EffectController: ObservableObject {
             guard let self else { return }
             self.angle = sample.angle
             self.isMoving = sample.isMoving
+
+            // Ten times a second is plenty for a readout, and keeps SwiftUI out
+            // of the sensor's update rate.
+            let now = CFAbsoluteTimeGetCurrent()
+            if now - self.lastDisplayAngleUpdate >= 0.1 {
+                self.lastDisplayAngleUpdate = now
+                self.displayAngle = sample.angle
+            }
         }
 
         // Rebuild the overlay if the display arrangement changes.

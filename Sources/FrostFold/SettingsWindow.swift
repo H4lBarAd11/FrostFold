@@ -107,7 +107,7 @@ struct SettingsView: View {
                 .foregroundStyle(.orange)
                 .lineLimit(2)
         } else if controller.sensorAvailable {
-            Text(String(format: "Lid %.1f°", controller.angle))
+            Text(String(format: "Lid %.1f°", controller.displayAngle))
                 .font(.caption)
                 .monospacedDigit()
                 .foregroundStyle(.secondary)
@@ -149,30 +149,35 @@ struct SettingsView: View {
 final class SettingsWindowController: NSWindowController {
     init(controller: EffectController, openPreview: @escaping () -> Void) {
         let root = SettingsView(settings: .shared, controller: controller, openPreview: openPreview)
-        let hosting = NSHostingController(rootView: root)
-        hosting.preferredContentSize = NSSize(width: 780, height: 560)
 
-        let window = NSWindow(contentViewController: hosting)
+        // Deliberately an NSHostingView set as the content view, rather than an
+        // NSHostingController used as the content view controller. The
+        // controller negotiates its own sizing and safe-area insets with the
+        // window, and that negotiation invalidates constraints from inside the
+        // constraint engine's own layout pass — which throws, and which AppKit
+        // turns into a hard crash for a bundled app. A plain hosting view in a
+        // window with a fixed content size never enters that negotiation.
+        let size = NSSize(width: 780, height: 600)
+        let hosting = NSHostingView(rootView: root)
+        hosting.frame = NSRect(origin: .zero, size: size)
+        hosting.autoresizingMask = [.width, .height]
+
+        let window = NSWindow(contentRect: NSRect(origin: .zero, size: size),
+                              styleMask: [.titled, .closable, .miniaturizable],
+                              backing: .buffered,
+                              defer: false)
         window.title = "FrostFold Settings"
-        window.styleMask = [.titled, .closable, .miniaturizable]
+        window.contentView = hosting
         window.isReleasedWhenClosed = false
         window.sharingType = .none
+        window.center()
+
         super.init(window: window)
     }
 
     required init?(coder: NSCoder) { fatalError("not supported") }
 
     func present() {
-        // Never let the panel run off the bottom of a laptop display: clamp to
-        // what the screen actually offers, then centre what's left.
-        if let window, let screen = window.screen ?? NSScreen.main {
-            let room = screen.visibleFrame.insetBy(dx: 20, dy: 20)
-            var frame = window.frame
-            frame.size.width = min(frame.width, room.width)
-            frame.size.height = min(frame.height, room.height)
-            window.setFrame(frame, display: false)
-            window.center()
-        }
         showWindow(nil)
         window?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
