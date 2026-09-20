@@ -119,9 +119,11 @@ struct PaneOut {
     float  lift;   // 0 at the hinge, 1 at the free edge
 };
 
-// The pane is hinged along the bottom edge of the display and tilts toward the
-// viewer, carrying the picture with it. The bottom stays pinned; the free edge
-// lifts, and the gap underneath it is what drives the frost.
+// The pane is hinged along the bottom edge of the display and folds away from
+// the viewer, carrying the picture with it — the way a lid closes, not the way
+// a page lifts. The hinge stays pinned at full width while everything above it
+// foreshortens and converges, so the pane collapses toward the hinge line
+// rather than spreading. The gap under the free edge is what drives the frost.
 vertex PaneOut pane_vertex(uint vid [[vertex_id]],
                            constant PaneUniforms& u [[buffer(0)]]) {
     const float2 corners[4] = { float2(-1,-1), float2(1,-1), float2(-1,1), float2(1,1) };
@@ -131,10 +133,11 @@ vertex PaneOut pane_vertex(uint vid [[vertex_id]],
     float c = cos(u.foldRadians);
     float s = sin(u.foldRadians);
     float y = h * c - 1.0;
-    float z = h * s;                  // toward the viewer
+    float z = -h * s;                 // away from the viewer
 
     // Leave the divide to the rasteriser so the picture stays perspective
-    // correct across the whole pane.
+    // correct across the whole pane. Folding away keeps w > 1 throughout, so
+    // the near plane can never be crossed however hard the perspective is set.
     float w = (u.cameraDistance - z) / u.cameraDistance;
 
     PaneOut out;

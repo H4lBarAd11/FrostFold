@@ -204,7 +204,7 @@ final class EffectController: ObservableObject {
 
         var u = Shaders.PaneUniforms()
         u.foldRadians = Float(tilt)
-        u.cameraDistance = Float(12.0 - 8.5 * s.perspective)   // 12 (flat) ... 3.5 (hard)
+        u.cameraDistance = Float(9.0 - 6.5 * s.perspective)    // 9 (flat) ... 2.5 (hard)
         // Normalised so the free edge reaches the intensity's frost gain when
         // the fold is fully in, whatever the maximum tilt happens to be.
         u.frostAmount = s.intensity.frostGain / Float(max(0.05, sin(maxTilt)))

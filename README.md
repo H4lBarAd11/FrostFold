@@ -32,9 +32,12 @@ account, no licence key, no network code of any kind.
 
 ## The fold
 
-The pane is hinged along the bottom edge of the display and tilts toward you,
-carrying the picture with it. Two things follow from that, and together they are
-the whole effect.
+The pane is hinged along the bottom edge of the display and folds *away* from
+you, carrying the picture with it — the way a lid closes, not the way a page
+lifts. The hinge stays pinned at full width while everything above it
+foreshortens and converges, so the picture collapses toward the hinge line
+instead of spreading. Three things follow, and together they are the whole
+effect.
 
 **The gap drives the frost.** The glass still meets the display at the hinge and
 lifts further away toward its free edge, so the gap is nothing at the bottom and
@@ -43,8 +46,11 @@ while the top goes milky. Hold frosted glass against text and you can read it;
 lift it away and you cannot.
 
 **What it lifts off has nothing left to show.** The picture has gone with the
-glass, so the display behind the pane blacks out — and as the pane leans further
-away, less light reaches you and the glass dims with it.
+glass, so the display behind the pane blacks out, and the black opens up from
+the top as the pane converges.
+
+**It dims as it leans.** Less light reaches you the further the pane tips away,
+so the glass darkens along with the gap.
 
 <table>
 <tr>
@@ -55,7 +61,7 @@ away, less light reaches you and the glass dims with it.
 <tr>
 <td align="center"><strong>125°</strong><br><sub>above the engage angle — nothing<br>renders, capture is off</sub></td>
 <td align="center"><strong>85°</strong><br><sub>the gap opens at the free edge</sub></td>
-<td align="center"><strong>28°</strong><br><sub>leaning hard, blacking out above</sub></td>
+<td align="center"><strong>28°</strong><br><sub>collapsed toward the hinge,<br>blacked out above</sub></td>
 </tr>
 </table>
 
@@ -111,7 +117,7 @@ hundred times.
 | | |
 |---|---|
 | **Intensity** | Low / Medium / High. How milky the top edge gets once the fold is fully in. |
-| **Perspective** | How hard the gap opens toward the top. Higher keeps the lower half clear for longer and concentrates the milk at the top. |
+| **Perspective** | How hard the pane converges as it folds away, and with it how fast the gap opens. Higher narrows the free edge further and concentrates the milk at the top. |
 | **Edge softness** | Fall-off at the pane's free edges. The hinged edge stays pinned to the display and never fades. |
 | **Dimming** | How far the glass darkens as the gap opens. |
 | **Corner radius** | Rounding on the free corners, in points, so you can match your display's own rounding. The hinged edge runs straight. |
@@ -142,10 +148,13 @@ Frames arrive as `IOSurface`-backed pixel buffers and become Metal textures
 without a copy.
 
 **The render.** The pane is a real quad in 3D, hinged along `y = -1` and rotated
-about that edge. The vertex shader hands the rasteriser a `w` of `(D - z) / D`
-and lets the hardware do the perspective divide, so the picture stays correct
-across the whole pane rather than warping the way a 2D fake does. Everything the
-pane no longer covers is filled black, because the picture left with the glass.
+about that edge, away from the viewer. The vertex shader hands the rasteriser a
+`w` of `(D - z) / D` and lets the hardware do the perspective divide, so the
+picture stays correct across the whole pane rather than warping the way a 2D
+fake does. Folding away rather than toward also keeps `w > 1` everywhere, so the
+near plane can never be crossed however hard the perspective is set. Everything
+the pane no longer covers is filled black, because the picture left with the
+glass.
 
 The gap at any point on the pane is its distance from the hinge times the sine of
 the tilt — zero at the hinge by construction, which is why the bottom stays

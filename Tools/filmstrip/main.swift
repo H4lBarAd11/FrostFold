@@ -162,7 +162,7 @@ for angle in angles {
 
     var u = Shaders.PaneUniforms()
     u.foldRadians    = Float(tilt)
-    u.cameraDistance = Float(12.0 - 8.5 * settings.perspective)
+    u.cameraDistance = Float(9.0 - 6.5 * settings.perspective)
     u.frostAmount    = settings.intensity.frostGain / Float(max(0.05, sin(maxTilt)))
     u.gapCurve       = Float(0.75 + 1.15 * settings.perspective)
     u.edgeSoftness   = Float(settings.edgeSoftness)
