@@ -8,11 +8,11 @@ struct SettingsView: View {
 
     var body: some View {
         ScrollView(.vertical) {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 20) {
                 // Two columns: the window is far wider than it is tall, so it
                 // fits on a laptop display without running off the bottom.
-                HStack(alignment: .top, spacing: 18) {
-                    VStack(alignment: .leading, spacing: 16) {
+                HStack(alignment: .top, spacing: 20) {
+                    VStack(alignment: .leading, spacing: 20) {
                         group("Effect") {
                             Picker("", selection: $settings.intensity) {
                                 ForEach(Intensity.allCases) { Text($0.label).tag($0) }
@@ -33,7 +33,7 @@ struct SettingsView: View {
                                      "How far the pane lifts once the fold is fully in.")
                         }
                     }
-                    VStack(alignment: .leading, spacing: 16) {
+                    VStack(alignment: .leading, spacing: 20) {
                         group("Feel") {
                             measured("Engages at", $settings.restAngle, 45...170, "%.0f°",
                                      "The lid angle where the fold starts.")
@@ -51,7 +51,7 @@ struct SettingsView: View {
                             .pickerStyle(.segmented)
                             .labelsHidden()
                             Text("Frame rate while the lid is still. Capture stops when settled.")
-                                .font(.caption)
+                                .font(.footnote)
                                 .foregroundStyle(Palette.inkSoftColor)
                         }
                     }
@@ -77,7 +77,11 @@ struct SettingsView: View {
             .padding(20)
             .frame(width: 780, alignment: .leading)
         }
+        // Tint once at the root; controls inherit rather than being painted
+        // individually. A dense utility panel takes .small throughout, and the
+        // system decides each control's height from that.
         .tint(Palette.sageColor)
+        .controlSize(.small)
         .background(Palette.backgroundColor)
         // A ScrollView has no intrinsic size, so without an explicit frame the
         // hosting controller collapses it to nothing. Fixed height keeps the
@@ -89,9 +93,9 @@ struct SettingsView: View {
 
     private func group<Content: View>(_ title: String,
                                       @ViewBuilder _ content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             Text(title.uppercased())
-                .font(.caption2.weight(.bold))
+                .font(.footnote.weight(.bold))
                 .foregroundStyle(Palette.caramelDeepColor)
                 .tracking(0.9)
             content()
@@ -142,7 +146,7 @@ struct SettingsView: View {
             }
             Slider(value: value, in: range)
             Text(note)
-                .font(.caption)
+                .font(.footnote)
                 .foregroundStyle(Palette.inkSoftColor)
                 .lineLimit(1)
         }
@@ -175,6 +179,8 @@ final class SettingsWindowController: NSWindowController {
         window.isReleasedWhenClosed = false
         window.sharingType = .none
         window.center()
+        // Reopen where the user left it.
+        window.setFrameAutosaveName("FrostFoldSettings")
 
         super.init(window: window)
     }

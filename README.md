@@ -244,6 +244,17 @@ the stream is torn down entirely and the overlay clears to fully transparent —
 what is left is a feature-report read at the stationary rate, which is a few
 dozen bytes over the HID transport.
 
+## Accessibility
+
+FrostFold reads the display settings you've already set, and re-reads them when
+they change:
+
+| | |
+|---|---|
+| **Reduce Motion** | The pane's travel is damped to a third. The effect is motion, so it's honoured by damping rather than by switching off — the frost still reads, the pane barely moves. |
+| **Reduce Transparency** | Scatter is halved, so what's behind the glass stays legible. |
+| **Increase Contrast** | Edge fall-off tightens to a defined edge instead of a fade. |
+
 ## Privacy
 
 Captured frames go from ScreenCaptureKit to the GPU and nowhere else. Nothing is
@@ -290,6 +301,7 @@ Sources/FrostFold/
 Tools/filmstrip/         still-image renderer
 Tools/icon/              draws the app icon
 Scripts/                 bundle.sh, filmstrip.sh, icon.sh, signing-identity.sh
+.claude/skills/apple-design/   the macOS design language this UI follows
 ```
 
 </details>

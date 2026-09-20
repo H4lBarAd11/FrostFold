@@ -23,6 +23,7 @@ final class PreviewWindowController: NSWindowController {
         window.center()
         // Keep the preview out of its own capture.
         window.sharingType = .none
+        window.setFrameAutosaveName("FrostFoldPreview")
         super.init(window: window)
 
         let container = NSView()
@@ -42,13 +43,17 @@ final class PreviewWindowController: NSWindowController {
         slider.target = self
         slider.action = #selector(scrubbed)
         slider.isContinuous = true
+        slider.controlSize = .small
+        followToggle.controlSize = .small
         slider.setContentHuggingPriority(.defaultLow, for: .horizontal)
 
         followToggle.state = .on
         followToggle.target = self
         followToggle.action = #selector(toggledFollow)
 
-        readout.font = .monospacedDigitSystemFont(ofSize: 11, weight: .regular)
+        // smallSystemFontSize, rather than a number picked by eye.
+        readout.font = .monospacedDigitSystemFont(ofSize: NSFont.smallSystemFontSize,
+                                                  weight: .regular)
         readout.textColor = .secondaryLabelColor
         readout.alignment = .right
         readout.setContentHuggingPriority(.required, for: .horizontal)

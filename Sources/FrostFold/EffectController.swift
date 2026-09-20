@@ -41,6 +41,12 @@ final class EffectController: ObservableObject {
 
     private var cancellables = Set<AnyCancellable>()
     private var idleSince: CFAbsoluteTime?
+
+    /// The display accessibility settings the user has already expressed a
+    /// preference through. Re-read on change rather than sampled once at launch.
+    private var reduceMotion = false
+    private var reduceTransparency = false
+    private var increaseContrast = false
     private var capturePending = false
 
     init?() {
@@ -72,6 +78,13 @@ final class EffectController: ObservableObject {
             }
         }
 
+        readAccessibilitySettings()
+        NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification,
+            object: nil, queue: .main) { [weak self] _ in
+                self?.readAccessibilitySettings()
+            }
+
         // Rebuild the overlay if the display arrangement changes.
         NotificationCenter.default
             .addObserver(forName: NSApplication.didChangeScreenParametersNotification,
@@ -87,6 +100,13 @@ final class EffectController: ObservableObject {
                 if on { self?.rebuildOverlay() }
             }
             .store(in: &cancellables)
+    }
+
+    private func readAccessibilitySettings() {
+        let workspace = NSWorkspace.shared
+        reduceMotion = workspace.accessibilityDisplayShouldReduceMotion
+        reduceTransparency = workspace.accessibilityDisplayShouldReduceTransparency
+        increaseContrast = workspace.accessibilityDisplayShouldIncreaseContrast
     }
 
     // MARK: - Lifecycle
@@ -217,14 +237,23 @@ final class EffectController: ObservableObject {
         let maxTilt = s.maxFold * .pi / 180.0
         let tilt = fold01 * maxTilt
 
+        // Reduce Motion is the user saying this should not move. For an effect
+        // that is motion, honour it by damping rather than by switching off —
+        // the frost still reads, the pane barely travels.
+        let motionScale = reduceMotion ? 0.35 : 1.0
+
         var u = Shaders.PaneUniforms()
-        u.foldRadians = Float(tilt)
+        u.foldRadians = Float(tilt * motionScale)
         u.cameraDistance = Float(9.0 - 6.5 * s.perspective)    // 9 (flat) ... 2.5 (hard)
         // Normalised so the free edge reaches the intensity's frost gain when
         // the fold is fully in, whatever the maximum tilt happens to be.
-        u.frostAmount = s.intensity.frostGain / Float(max(0.05, sin(maxTilt)))
+        // Reduce Transparency asks for legibility over glass, so scatter less.
+        let frostScale: Float = reduceTransparency ? 0.5 : 1.0
+        u.frostAmount = frostScale * s.intensity.frostGain
+                      / Float(max(0.05, sin(maxTilt * motionScale)))
         u.gapCurve = Float(0.75 + 1.15 * s.perspective)
-        u.edgeSoftness = Float(s.edgeSoftness)
+        // Increase Contrast wants a defined edge, not a fade.
+        u.edgeSoftness = Float(increaseContrast ? s.edgeSoftness * 0.25 : s.edgeSoftness)
         // Pane-local y spans [-1, 1] across the display height, so one unit is
         // half the display in points.
         let halfHeightPoints = max(1.0, (view.window?.frame.height ?? 800) / 2)
