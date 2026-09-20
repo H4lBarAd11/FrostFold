@@ -18,7 +18,7 @@ final class PreviewWindowController: NSWindowController {
             contentRect: NSRect(x: 0, y: 0, width: 760, height: 520),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered, defer: false)
-        window.title = "Clamshell Preview"
+        window.title = "MacGlass Preview"
         window.isReleasedWhenClosed = false
         window.center()
         // Keep the preview out of its own capture.

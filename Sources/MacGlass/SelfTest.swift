@@ -1,7 +1,7 @@
 import Foundation
 import Metal
 
-/// `Clamshell --selftest` — headless diagnostics. Verifies the pieces that can
+/// `MacGlass --selftest` — headless diagnostics. Verifies the pieces that can
 /// fail on an unfamiliar machine (runtime shader compilation, the lid sensor,
 /// the capture permission) without putting anything on screen.
 enum SelfTest {
@@ -15,7 +15,7 @@ enum SelfTest {
             if !ok { failures += 1 }
         }
 
-        print("Clamshell self-test\n")
+        print("MacGlass self-test\n")
 
         // Metal + runtime shader compilation
         if let device = MTLCreateSystemDefaultDevice() {

@@ -8,9 +8,9 @@ OUT=.build/filmstrip-tool
 mkdir -p "$(dirname "$OUT")"
 
 swiftc -O \
-  Sources/Clamshell/Shaders.swift \
-  Sources/Clamshell/MetalRenderer.swift \
-  Sources/Clamshell/Settings.swift \
+  Sources/MacGlass/Shaders.swift \
+  Sources/MacGlass/MetalRenderer.swift \
+  Sources/MacGlass/Settings.swift \
   Tools/filmstrip/main.swift \
   -o "$OUT"
 

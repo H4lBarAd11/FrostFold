@@ -116,7 +116,7 @@ final class SettingsWindowController: NSWindowController {
         let root = SettingsView(settings: .shared, controller: controller)
         let hosting = NSHostingController(rootView: root)
         let window = NSWindow(contentViewController: hosting)
-        window.title = "Clamshell Settings"
+        window.title = "MacGlass Settings"
         window.styleMask = [.titled, .closable, .miniaturizable]
         window.isReleasedWhenClosed = false
         window.sharingType = .none

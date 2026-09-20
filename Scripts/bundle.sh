@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds Clamshell.app into dist/. Needs Xcode Command Line Tools only —
+# Builds MacGlass.app into dist/. Needs Xcode Command Line Tools only —
 # the Metal shaders are compiled at runtime, so no `metal` compiler is required.
 #
 #   Scripts/bundle.sh              native slice only (fast, for iterating)
@@ -8,7 +8,7 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
-APP="dist/Clamshell.app"
+APP="dist/MacGlass.app"
 ARCH_ARGS=()
 LABEL="native"
 
@@ -20,13 +20,13 @@ fi
 echo "==> Building (release, $LABEL)"
 swift build -c release "${ARCH_ARGS[@]}"
 
-BIN="$(swift build -c release "${ARCH_ARGS[@]}" --show-bin-path)/Clamshell"
+BIN="$(swift build -c release "${ARCH_ARGS[@]}" --show-bin-path)/MacGlass"
 [ -x "$BIN" ] || { echo "error: binary not found at $BIN" >&2; exit 1; }
 
 echo "==> Assembling $APP"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-cp "$BIN" "$APP/Contents/MacOS/Clamshell"
+cp "$BIN" "$APP/Contents/MacOS/MacGlass"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
 printf 'APPL????' > "$APP/Contents/PkgInfo"
 
@@ -38,5 +38,5 @@ codesign --force --sign - --timestamp=none "$APP"
 codesign --verify --verbose=2 "$APP" 2>&1 | sed 's/^/    /'
 
 echo
-echo "Built $APP  ($(lipo -archs "$APP/Contents/MacOS/Clamshell"), $(du -sh "$APP" | cut -f1))"
+echo "Built $APP  ($(lipo -archs "$APP/Contents/MacOS/MacGlass"), $(du -sh "$APP" | cut -f1))"
 echo "Run it with:  open $APP"
