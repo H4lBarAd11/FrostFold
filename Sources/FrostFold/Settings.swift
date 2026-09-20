@@ -60,7 +60,7 @@ final class Settings: ObservableObject {
         dimming            = dbl("dimming", 0.45)
         cornerRadius       = dbl("cornerRadiusPt", 33)
         responsiveness     = dbl("responsiveness", 0.3)
-        hingeSensitivity   = dbl("hingeSensitivity", 0.7)
+        hingeSensitivity   = dbl("hingeSensitivity", 0.35)
         movementThreshold  = dbl("movementThreshold", 1.0)
         stationaryFPS      = StationaryFPS(rawValue: store.object(forKey: "stationaryFPS") as? Int ?? 30) ?? .f30
         restAngle          = dbl("engageAngle", 85)
@@ -81,7 +81,7 @@ final class Settings: ObservableObject {
         intensity = .medium;        perspective = 0.5
         edgeSoftness = 0.4;         dimming = 0.45
         cornerRadius = 33
-        responsiveness = 0.3;       hingeSensitivity = 0.7
+        responsiveness = 0.3;       hingeSensitivity = 0.35
         movementThreshold = 1.0;    stationaryFPS = .f30
         restAngle = 85;             maxFold = 68
     }
@@ -94,9 +94,11 @@ final class Settings: ObservableObject {
         // the whole 0...engage range: a lid never reaches 0°, and treating it
         // as though it might leaves the fold unfinished as the lid shuts.
         let t = max(0, min(1, (restAngle - angle) / (restAngle - shutAngle)))
-        // Sensitivity biases the curve: low means most of the travel happens
-        // near shut, high means the fold rises as soon as the lid moves.
-        let gamma = 2.6 - 2.2 * hingeSensitivity   // 2.6 (lazy) ... 0.4 (eager)
+        // Sensitivity biases the curve: low means almost nothing happens until
+        // the lid is well down, high means the fold rises as soon as it moves.
+        // Weighted lazy, because engaging linearly from the engage angle reads
+        // as the effect snapping on rather than gathering.
+        let gamma = 3.4 - 3.0 * hingeSensitivity   // 3.4 (lazy) ... 0.4 (eager)
         return pow(t, gamma)
     }
 }

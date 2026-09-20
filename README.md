@@ -73,8 +73,8 @@ so the glass darkens along with the gap.
 </tr>
 <tr>
 <td align="center"><strong>100°</strong><br><sub>above the engage angle — nothing<br>renders, capture is off</sub></td>
-<td align="center"><strong>62°</strong><br><sub>converging, the gap opening<br>at the free edge</sub></td>
-<td align="center"><strong>20°</strong><br><sub>collapsed toward the hinge,<br>blacked out above</sub></td>
+<td align="center"><strong>50°</strong><br><sub>gathering — converging, the gap<br>just opening at the free edge</sub></td>
+<td align="center"><strong>22°</strong><br><sub>collapsed toward the hinge,<br>blacked out above</sub></td>
 </tr>
 </table>
 
@@ -106,9 +106,10 @@ the icon and ad-hoc signs it. Drop `--universal` while you're iterating to build
 only the native slice — it's roughly ten times quicker.
 
 > [!NOTE]
-> The ad-hoc signature is not cosmetic. macOS remembers the Screen Recording
-> grant against the bundle's identity, so an unsigned bundle loses the
-> permission on every rebuild.
+> Ad-hoc signing gives the bundle a valid signature but not a *stable* one: the
+> code hash changes with every build, so macOS treats each rebuild as a new app
+> and asks for Screen Recording again. That's normal while you're working on it.
+> A real Developer ID signature is what makes the grant stick across builds.
 
 > [!IMPORTANT]
 > The app isn't notarised by Apple, so the first launch of a copy you didn't
@@ -139,7 +140,8 @@ FrostFold needs **Screen Recording**, and it is not optional — the glass is
 built out of your live display, so there is nothing to render without it.
 
 macOS asks once, on first launch, with its own prompt. Allow it and FrostFold
-carries straight on.
+carries straight on. It will ask again after a rebuild, for the reason in the
+note above.
 
 If you dismissed that prompt, macOS won't ask a second time — FrostFold will say
 so and offer to open Privacy & Security → Screen Recording, where you can switch
@@ -168,7 +170,7 @@ closing the lid a hundred times.
 | | |
 |---|---|
 | **Responsiveness** | Low trails the lid; high tracks it immediately. |
-| **Hinge sensitivity** | Where in the lid's travel the fold does most of its work. |
+| **Hinge sensitivity** | Where in the lid's travel the fold does its work. Low holds off until the lid is well down and then gathers; high rises the moment the lid moves. |
 | **Minimum movement** | Deadband, in degrees. Below this the pane holds still, so a lid parked part-way open doesn't shimmer on sensor noise. |
 | **Engages at** | The lid angle at which the fold starts, 85° by default — a little past perpendicular, so normal use never triggers it. Above this angle nothing renders and capture is off. |
 | **Maximum fold** | How far the pane lifts off the display once the fold is fully in — which is what sets the gap, and so the frost. |

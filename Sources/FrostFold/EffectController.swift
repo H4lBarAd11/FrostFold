@@ -217,9 +217,9 @@ final class EffectController: ObservableObject {
         u.grainAmount = 1.0
         u.aspect = view.aspect
         u.grainScale = SIMD2(Float(max(1, size.width / 7)), Float(max(1, size.height / 7)))
-        // A short ramp keeps the blackout from popping in at the moment the
-        // fold engages, while the pane still covers the whole display.
-        u.opacity = Float(smoothstep(0, 0.04, fold01))
+        // Ease the whole thing in rather than switching it on. At 0.04 the
+        // blackout arrived effectively as a step.
+        u.opacity = Float(smoothstep(0, 0.14, fold01))
         u.dim = Float(s.dimming)
         return u
     }

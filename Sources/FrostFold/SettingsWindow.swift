@@ -7,71 +7,96 @@ struct SettingsView: View {
     var openPreview: () -> Void = {}
 
     var body: some View {
-        Form {
-            Section("Effect") {
-                Picker("Intensity", selection: $settings.intensity) {
-                    ForEach(Intensity.allCases) { Text($0.label).tag($0) }
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-            }
-
-            Section("Material") {
-                percent("Perspective", $settings.perspective,
-                        note: "How hard the gap opens toward the top.")
-                percent("Edge softness", $settings.edgeSoftness,
-                        note: "Fall-off at the pane's edges.")
-                percent("Dimming", $settings.dimming,
-                        note: "How far the glass darkens as the gap opens.")
-                measured("Corner radius", $settings.cornerRadius, 0...60, "%.0f pt",
-                         note: "Rounding on the free corners, to match your display.")
-            }
-
-            Section("Feel") {
-                percent("Responsiveness", $settings.responsiveness,
-                        note: "How tightly the fold tracks your hand.")
-                percent("Hinge sensitivity", $settings.hingeSensitivity,
-                        note: "How quickly the fold rises once the lid moves.")
-                measured("Minimum movement", $settings.movementThreshold, 0.1...5, "%.1f°",
-                         note: "How far the lid must move from rest before the fold starts.")
-                measured("Engages at", $settings.restAngle, 60...170, "%.0f°",
-                         note: "Above this angle the pane lies flat and nothing renders.")
-                measured("Maximum fold", $settings.maxFold, 10...85, "%.0f°",
-                         note: "How far the pane lifts off the display when fully folded.")
-            }
-
-            Section("Performance") {
-                Picker("Stationary frame rate", selection: $settings.stationaryFPS) {
-                    ForEach(StationaryFPS.allCases) { Text($0.label).tag($0) }
-                }
-                .pickerStyle(.segmented)
-            }
-
-            Section {
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack(alignment: .firstTextBaseline) {
-                        statusLine
-                        Spacer()
-                        Button("Reset") { settings.resetToDefaults() }
+        ScrollView(.vertical) {
+            VStack(alignment: .leading, spacing: 16) {
+                // Two columns: the window is far wider than it is tall, so it
+                // fits on a laptop display without running off the bottom.
+                HStack(alignment: .top, spacing: 18) {
+                    VStack(alignment: .leading, spacing: 16) {
+                        group("Effect") {
+                            Picker("", selection: $settings.intensity) {
+                                ForEach(Intensity.allCases) { Text($0.label).tag($0) }
+                            }
+                            .pickerStyle(.segmented)
+                            .labelsHidden()
+                        }
+                        group("Material") {
+                            percent("Perspective", $settings.perspective,
+                                    "How hard the pane converges as it folds away.")
+                            percent("Edge softness", $settings.edgeSoftness,
+                                    "Fall-off at the free edges. The hinge never fades.")
+                            percent("Dimming", $settings.dimming,
+                                    "How far the glass darkens as the gap opens.")
+                            measured("Corner radius", $settings.cornerRadius, 0...60, "%.0f pt",
+                                     "Rounding on the free corners, to match your display.")
+                            measured("Maximum fold", $settings.maxFold, 10...85, "%.0f°",
+                                     "How far the pane lifts once the fold is fully in.")
+                        }
                     }
-                    Divider()
-                    HStack {
-                        Toggle("Enabled", isOn: $settings.enabled)
-                            .toggleStyle(.switch)
-                        Spacer()
-                        Button("Preview…") { openPreview() }
-                        // FrostFold has no menu bar item, so this is the way out.
-                        Button("Quit FrostFold") { NSApp.terminate(nil) }
+                    VStack(alignment: .leading, spacing: 16) {
+                        group("Feel") {
+                            measured("Engages at", $settings.restAngle, 45...170, "%.0f°",
+                                     "The lid angle where the fold starts.")
+                            percent("Hinge sensitivity", $settings.hingeSensitivity,
+                                    "Low holds off until the lid is well down; high rises at once.")
+                            percent("Responsiveness", $settings.responsiveness,
+                                    "How tightly the fold tracks your hand.")
+                            measured("Minimum movement", $settings.movementThreshold, 0.1...5, "%.1f°",
+                                     "How far the lid must move from rest before anything happens.")
+                        }
+                        group("Performance") {
+                            Picker("", selection: $settings.stationaryFPS) {
+                                ForEach(StationaryFPS.allCases) { Text($0.label).tag($0) }
+                            }
+                            .pickerStyle(.segmented)
+                            .labelsHidden()
+                            Text("Frame rate while the lid is still. Capture stops when settled.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                     }
-                    Text("FrostFold runs in the background. Launch it again to reopen these settings.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
                 }
+
+                Divider()
+
+                HStack(spacing: 12) {
+                    Toggle("Enabled", isOn: $settings.enabled)
+                        .toggleStyle(.switch)
+                    statusLine
+                    Spacer()
+                    Button("Reset") { settings.resetToDefaults() }
+                    Button("Preview…") { openPreview() }
+                    // There is no menu bar item, so this is the way out.
+                    Button("Quit") { NSApp.terminate(nil) }
+                }
+
+                Text("FrostFold runs in the background. Launch it again to reopen these settings.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
+            .padding(20)
+            .frame(width: 780, alignment: .leading)
         }
-        .formStyle(.grouped)
-        .frame(width: 460)
-        .fixedSize(horizontal: false, vertical: true)
+        // A ScrollView has no intrinsic size, so without an explicit frame the
+        // hosting controller collapses it to nothing. Fixed height keeps the
+        // panel wide and short, and lets it scroll if it ever outgrows this.
+        .frame(width: 780, height: 600)
+    }
+
+    // MARK: - Pieces
+
+    private func group<Content: View>(_ title: String,
+                                      @ViewBuilder _ content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title.uppercased())
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .tracking(0.6)
+            content()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background(.quaternary.opacity(0.35), in: RoundedRectangle(cornerRadius: 10))
     }
 
     @ViewBuilder
@@ -80,23 +105,22 @@ struct SettingsView: View {
             Label(message, systemImage: "exclamationmark.triangle.fill")
                 .font(.caption)
                 .foregroundStyle(.orange)
-                .fixedSize(horizontal: false, vertical: true)
+                .lineLimit(2)
         } else if controller.sensorAvailable {
-            Text(String(format: "Lid %.1f° · engages at %.0f°",
-                        controller.angle, settings.restAngle))
+            Text(String(format: "Lid %.1f°", controller.angle))
                 .font(.caption)
                 .monospacedDigit()
                 .foregroundStyle(.secondary)
         }
     }
 
-    private func percent(_ title: String, _ value: Binding<Double>, note: String) -> some View {
+    private func percent(_ title: String, _ value: Binding<Double>, _ note: String) -> some View {
         slider(title, value, 0...1, { String(format: "%.0f%%", $0 * 100) }, note)
     }
 
     private func measured(_ title: String, _ value: Binding<Double>,
                           _ range: ClosedRange<Double>, _ format: String,
-                          note: String) -> some View {
+                          _ note: String) -> some View {
         slider(title, value, range, { String(format: format, $0) }, note)
     }
 
@@ -104,20 +128,21 @@ struct SettingsView: View {
                         _ range: ClosedRange<Double>,
                         _ readout: @escaping (Double) -> String,
                         _ note: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HStack {
-                Text(title)
+        VStack(alignment: .leading, spacing: 1) {
+            HStack(spacing: 8) {
+                Text(title).font(.callout)
                 Spacer()
                 Text(readout(value.wrappedValue))
+                    .font(.callout)
                     .monospacedDigit()
                     .foregroundStyle(.secondary)
             }
             Slider(value: value, in: range)
             Text(note)
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.tertiary)
+                .lineLimit(1)
         }
-        .padding(.vertical, 2)
     }
 }
 
@@ -125,18 +150,29 @@ final class SettingsWindowController: NSWindowController {
     init(controller: EffectController, openPreview: @escaping () -> Void) {
         let root = SettingsView(settings: .shared, controller: controller, openPreview: openPreview)
         let hosting = NSHostingController(rootView: root)
+        hosting.preferredContentSize = NSSize(width: 780, height: 560)
+
         let window = NSWindow(contentViewController: hosting)
         window.title = "FrostFold Settings"
         window.styleMask = [.titled, .closable, .miniaturizable]
         window.isReleasedWhenClosed = false
         window.sharingType = .none
-        window.center()
         super.init(window: window)
     }
 
     required init?(coder: NSCoder) { fatalError("not supported") }
 
     func present() {
+        // Never let the panel run off the bottom of a laptop display: clamp to
+        // what the screen actually offers, then centre what's left.
+        if let window, let screen = window.screen ?? NSScreen.main {
+            let room = screen.visibleFrame.insetBy(dx: 20, dy: 20)
+            var frame = window.frame
+            frame.size.width = min(frame.width, room.width)
+            frame.size.height = min(frame.height, room.height)
+            window.setFrame(frame, display: false)
+            window.center()
+        }
         showWindow(nil)
         window?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
