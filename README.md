@@ -95,6 +95,10 @@ in one line.
 
 ## Install
 
+Download the latest build from
+[Releases](https://github.com/H4lBarAd11/FrostFold/releases/latest), or build it
+yourself:
+
 ```sh
 git clone <your-fork> && cd FrostFold
 Scripts/signing-identity.sh        # once — see the note below
@@ -154,8 +158,9 @@ dist/FrostFold.app/Contents/MacOS/FrostFold --quit  # stop it
 inside the bundle. The settings window carries an Enabled switch, a Preview
 button and Quit, so you never need the command line to get back out.
 
-To start it with the Mac, add `FrostFold.app` under System Settings → General →
-Login Items.
+To start it with the Mac, use **Start FrostFold at login** in its settings. If
+macOS holds the registration pending approval, the panel says so and offers to
+open the Login Items pane.
 
 ## Permission
 
