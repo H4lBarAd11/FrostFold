@@ -96,7 +96,7 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title.uppercased())
                 .font(.footnote.weight(.bold))
-                .foregroundStyle(Palette.caramelDeepColor)
+                .foregroundStyle(Palette.caramelColor)
                 .tracking(0.9)
             content()
         }

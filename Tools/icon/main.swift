@@ -62,7 +62,7 @@ func draw(into ctx: CGContext, size: CGFloat) {
 
     // What the glass still carries, clear at the hinge: sage into caramel.
     if let wallpaper = CGGradient(colorsSpace: space, colors: [
-        rgb(0x6E, 0x8B, 0x6E), rgb(0x8E, 0x7A, 0x4A), rgb(0xB5, 0x65, 0x1D)] as CFArray,
+        rgb(0x6E, 0x8B, 0x6E), rgb(0x84, 0x76, 0x52), rgb(0x9A, 0x66, 0x36)] as CFArray,
         locations: [0, 0.55, 1]) {
         ctx.drawLinearGradient(wallpaper,
                                start: CGPoint(x: cx - hingeHalf, y: hingeY),

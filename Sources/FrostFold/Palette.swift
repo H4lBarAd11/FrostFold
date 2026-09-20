@@ -8,20 +8,21 @@ import AppKit
 /// a dark panel — rather than being part of the original system.
 enum Palette {
 
-    // Accents.
-    /// #6E8B6E. The primary accent: controls, and the state of things.
+    // Accents. Light values are the house ones; ratios are measured against the
+    // ivory ground and stated, as the house stylesheets do.
+
+    /// #6E8B6E — 3.53:1 on ivory. Clears AA for *large* text only, so this is
+    /// for tint and marks, never for running text.
     static let sage        = dynamic(light: 0x6E8B6E, dark: 0x9DBA9D)
-    /// #4F6650. Contrast-safe for small text on a tint.
-    static let sageDeep    = dynamic(light: 0x4F6650, dark: 0xB8D0B8)
+    /// #4F684F — 5.75:1. Safe for body-size text.
+    static let sageDeep    = dynamic(light: 0x4F684F, dark: 0xB8D0B8)
     /// #EFF3EF. The wash behind a grouped section.
     static let sageTint    = dynamic(light: 0xEFF3EF, dark: 0x1E2620)
 
-    /// #B5651D. The secondary accent: section headings, and the warm edge in
-    /// the icon.
-    static let caramel     = dynamic(light: 0xB5651D, dark: 0xE08B3C)
-    /// #8C4C14. Contrast-safe for small text on a tint.
-    static let caramelDeep = dynamic(light: 0x8C4C14, dark: 0xEFA664)
-    static let caramelTint = dynamic(light: 0xFBF3E8, dark: 0x2A2018)
+    /// #9A6636 — 4.55:1. Clears AA for body text on its own, which is why there
+    /// is no separate deep variant to go with it.
+    static let caramel     = dynamic(light: 0x9A6636, dark: 0xC9A06A)
+    static let caramelTint = dynamic(light: 0xF8F1E8, dark: 0x2A2018)
 
     // Ground. Ivory rather than flat white, as in the original.
     static let background  = dynamic(light: 0xF9F8EF, dark: 0x1C1C1A)
@@ -34,7 +35,6 @@ enum Palette {
     static var sageDeepColor: Color    { Color(nsColor: sageDeep) }
     static var sageTintColor: Color    { Color(nsColor: sageTint) }
     static var caramelColor: Color     { Color(nsColor: caramel) }
-    static var caramelDeepColor: Color { Color(nsColor: caramelDeep) }
     static var backgroundColor: Color  { Color(nsColor: background) }
     static var inkColor: Color         { Color(nsColor: ink) }
     static var inkSoftColor: Color     { Color(nsColor: inkSoft) }
