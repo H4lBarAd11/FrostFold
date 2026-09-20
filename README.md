@@ -6,8 +6,9 @@
 
 **A pane of frosted glass, hinged along the bottom edge of your MacBook's display.**
 
-Clear where it touches, frosted where it lifts. It reads the lid-angle sensor<br>
-directly — close the lid slowly and the glass follows your hand. Stop halfway and it holds.
+Close the lid and the picture lifts away with the glass — clear where it still<br>
+touches, frosted where it has lifted. It reads the lid-angle sensor directly, so it<br>
+moves at the speed of your hand. Stop halfway and it holds there.
 
 <p>
   <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-1c1c1e?style=flat-square&logo=apple&logoColor=white">
@@ -31,13 +32,19 @@ account, no licence key, no network code of any kind.
 
 ## The fold
 
-The pane is hinged along the bottom edge of the display, so the gap between
-glass and screen is nothing at the hinge and grows toward the top. The frost
-follows the gap. The bottom of your display stays clear — near the hinge the
-glass is practically touching it — while the top goes milky.
+The pane is hinged along the bottom edge of the display and tilts toward you,
+carrying the picture with it. Two things follow from that, and together they are
+the whole effect.
 
-It is not a blur laid over the screen. Nothing moves out of place; what changes
-is how far the glass is standing off it.
+**The gap drives the frost.** The glass still meets the display at the hinge and
+lifts further away toward its free edge, so the gap is nothing at the bottom and
+widest at the top. Frost follows the gap: the bottom of your screen stays clear
+while the top goes milky. Hold frosted glass against text and you can read it;
+lift it away and you cannot.
+
+**What it lifts off has nothing left to show.** The picture has gone with the
+glass, so the display behind the pane blacks out — and as the pane leans further
+away, less light reaches you and the glass dims with it.
 
 <table>
 <tr>
@@ -47,8 +54,8 @@ is how far the glass is standing off it.
 </tr>
 <tr>
 <td align="center"><strong>125°</strong><br><sub>above the engage angle — nothing<br>renders, capture is off</sub></td>
-<td align="center"><strong>80°</strong><br><sub>the gap opens at the top</sub></td>
-<td align="center"><strong>22°</strong><br><sub>nearly shut</sub></td>
+<td align="center"><strong>85°</strong><br><sub>the gap opens at the free edge</sub></td>
+<td align="center"><strong>28°</strong><br><sub>leaning hard, blacking out above</sub></td>
 </tr>
 </table>
 
@@ -105,7 +112,8 @@ hundred times.
 |---|---|
 | **Intensity** | Low / Medium / High. How milky the top edge gets once the fold is fully in. |
 | **Perspective** | How hard the gap opens toward the top. Higher keeps the lower half clear for longer and concentrates the milk at the top. |
-| **Edge softness** | Fall-off at the pane's edges. |
+| **Edge softness** | Fall-off at the pane's free edges. The hinged edge stays pinned to the display and never fades. |
+| **Dimming** | How far the glass darkens as the gap opens. |
 | **Corner radius** | Rounding on the free corners, in points, so you can match your display's own rounding. The hinged edge runs straight. |
 
 **Motion**
@@ -133,18 +141,21 @@ FrostFold's own windows excluded from the content filter (and marked
 Frames arrive as `IOSurface`-backed pixel buffers and become Metal textures
 without a copy.
 
-**The render.** The pane covers the display and is hinged along its bottom
-edge. The gap at any point is its height above the hinge times the sine of the
-tilt, so it is zero at the hinge by construction — that single fact is the whole
-effect. Frost is read straight off the gap.
+**The render.** The pane is a real quad in 3D, hinged along `y = -1` and rotated
+about that edge. The vertex shader hands the rasteriser a `w` of `(D - z) / D`
+and lets the hardware do the perspective divide, so the picture stays correct
+across the whole pane rather than warping the way a 2D fake does. Everything the
+pane no longer covers is filled black, because the picture left with the glass.
 
-Rather than crossfading one blurred copy against the sharp frame, the renderer
-builds a four-level blur pyramid (¼, ⅛ and ¹⁄₁₆ resolution, each softer than the
-last) and the fragment shader walks it continuously by the local frost. A
-crossfade reads as haze sitting on top of a still-sharp picture; walking a
-pyramid genuinely defocuses, which is what a diffuser does. Grain is keyed to
-pane-local coordinates, so it lives in the material rather than on the display
-behind it.
+The gap at any point on the pane is its distance from the hinge times the sine of
+the tilt — zero at the hinge by construction, which is why the bottom stays
+clear without that having to be tuned. Frost is read straight off it. Rather than
+crossfading one blurred copy against the sharp frame, the renderer builds a
+four-level blur pyramid (¼, ⅛ and ¹⁄₁₆ resolution, each softer than the last) and
+the fragment shader walks it continuously by the local frost. A crossfade reads
+as haze sitting on top of a still-sharp picture; walking a pyramid genuinely
+defocuses, which is what a diffuser does. Grain is keyed to pane-local
+coordinates, so it lives in the material and travels with it.
 
 There is no specular term anywhere in the shader. Etched glass scatters light;
 it does not reflect it.

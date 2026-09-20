@@ -148,6 +148,10 @@ let outDesc = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .bgra8Unorm,
 outDesc.usage = [.renderTarget, .shaderRead]
 outDesc.storageMode = .shared
 
+func smoothstep(_ a: Double, _ b: Double, _ x: Double) -> Double {
+    let t = max(0, min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t)
+}
+
 let settings = Settings.shared
 print("background \(W)×\(H)  →  \(outDir)/")
 
@@ -157,17 +161,18 @@ for angle in angles {
     let tilt = fold * maxTilt
 
     var u = Shaders.PaneUniforms()
-    u.foldRadians  = Float(tilt)
-    u.frostAmount  = settings.intensity.frostGain / Float(max(0.05, sin(maxTilt)))
-    u.gapCurve     = Float(0.75 + 1.15 * settings.perspective)
-    u.opacity      = 1
-    u.edgeSoftness = Float(settings.edgeSoftness)
+    u.foldRadians    = Float(tilt)
+    u.cameraDistance = Float(12.0 - 8.5 * settings.perspective)
+    u.frostAmount    = settings.intensity.frostGain / Float(max(0.05, sin(maxTilt)))
+    u.gapCurve       = Float(0.75 + 1.15 * settings.perspective)
+    u.edgeSoftness   = Float(settings.edgeSoftness)
     // The synthetic desktop stands in for a display of the same pixel height.
-    u.cornerRadius = Float(min(0.9, settings.cornerRadius / (Double(H) / 2)))
-    u.grainAmount  = 1
-    u.aspect       = Float(W) / Float(H)
-    u.grainScale   = SIMD2(Float(W) / 7, Float(H) / 7)
-    u.viewportSize = SIMD2(Float(W), Float(H))
+    u.cornerRadius   = Float(min(0.9, settings.cornerRadius / (Double(H) / 2)))
+    u.grainAmount    = 1
+    u.aspect         = Float(W) / Float(H)
+    u.grainScale     = SIMD2(Float(W) / 7, Float(H) / 7)
+    u.opacity        = Float(smoothstep(0, 0.04, fold))
+    u.dim            = Float(settings.dimming)
 
     let target = device.makeTexture(descriptor: outDesc)!
     renderer.render(to: target, source: source, uniforms: u, opaqueBackground: true)

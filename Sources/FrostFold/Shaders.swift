@@ -10,19 +10,22 @@ enum Shaders {
 struct PaneUniforms {
     /// Tilt of the pane away from the display, in radians. Drives the gap.
     var foldRadians: Float = 0
-    /// Frost at the top edge, 0...1+. The gradient scales down to 0 at the hinge.
+    /// Viewer distance for the perspective divide. Smaller converges harder.
+    var cameraDistance: Float = 8
+    /// Frost at the free edge, 0...1+. The gradient falls to 0 at the hinge.
     var frostAmount: Float = 0
-    /// Shapes how the gap opens with height. 1 is linear.
+    /// Shapes how the gap opens along the pane. 1 is linear.
     var gapCurve: Float = 1
-    /// Global fade, used to bring the pane in and out.
-    var opacity: Float = 1
     var edgeSoftness: Float = 0
-    /// Corner rounding of the free (top) corners, as a fraction of pane height.
+    /// Corner rounding of the free corners, as a fraction of pane half-height.
     var cornerRadius: Float = 0
     var grainAmount: Float = 1
     var aspect: Float = 1.6
     var grainScale: SIMD2<Float> = .init(120, 75)
-    var viewportSize: SIMD2<Float> = .init(1, 1)
+    /// Global fade, used to bring the whole effect in and out.
+    var opacity: Float = 1
+    /// How much the glass dims as the gap opens.
+    var dim: Float = 0
 }
 
 struct BlurUniforms {
@@ -35,15 +38,16 @@ using namespace metal;
 
 struct PaneUniforms {
     float  foldRadians;
+    float  cameraDistance;
     float  frostAmount;
     float  gapCurve;
-    float  opacity;
     float  edgeSoftness;
     float  cornerRadius;
     float  grainAmount;
     float  aspect;
     float2 grainScale;
-    float2 viewportSize;
+    float  opacity;
+    float  dim;
 };
 
 struct BlurUniforms { float2 direction; };
@@ -99,25 +103,45 @@ fragment half4 blur_fragment(BlitOut in [[stage_in]],
     return c;
 }
 
+// The pane carries the picture away with it, so the display it lifted off has
+// nothing left to show. Everything outside the pane's silhouette goes black.
+fragment half4 blackout_fragment(BlitOut in [[stage_in]],
+                                 constant PaneUniforms& u [[buffer(0)]]) {
+    return half4(0.0h, 0.0h, 0.0h, half(u.opacity));
+}
+
 // --------------------------------------------------------------- glass pane
 
 struct PaneOut {
     float4 position [[position]];
-    float2 uv;     // screen-space, and therefore also display-texture space
+    float2 uv;     // into the captured display texture
     float2 pane;   // pane-local, [-1,1] on both axes
+    float  lift;   // 0 at the hinge, 1 at the free edge
 };
 
-// The pane covers the display. It is hinged along the bottom edge and tilts
-// away from the screen, but it does not carry a copy of the display with it —
-// what you see through it stays exactly where it is. Only the gap changes.
-vertex PaneOut pane_vertex(uint vid [[vertex_id]]) {
+// The pane is hinged along the bottom edge of the display and tilts toward the
+// viewer, carrying the picture with it. The bottom stays pinned; the free edge
+// lifts, and the gap underneath it is what drives the frost.
+vertex PaneOut pane_vertex(uint vid [[vertex_id]],
+                           constant PaneUniforms& u [[buffer(0)]]) {
     const float2 corners[4] = { float2(-1,-1), float2(1,-1), float2(-1,1), float2(1,1) };
     float2 p = corners[vid];
 
+    float h = p.y + 1.0;              // 0 at the hinge, 2 at the free edge
+    float c = cos(u.foldRadians);
+    float s = sin(u.foldRadians);
+    float y = h * c - 1.0;
+    float z = h * s;                  // toward the viewer
+
+    // Leave the divide to the rasteriser so the picture stays perspective
+    // correct across the whole pane.
+    float w = (u.cameraDistance - z) / u.cameraDistance;
+
     PaneOut out;
-    out.position = float4(p, 0.0, 1.0);
+    out.position = float4(p.x, y, 0.0, w);
     out.uv       = float2(p.x * 0.5 + 0.5, 0.5 - p.y * 0.5);
     out.pane     = p;
+    out.lift     = h * 0.5;
     return out;
 }
 
@@ -168,35 +192,35 @@ fragment half4 pane_fragment(PaneOut in [[stage_in]],
                              texture2d<half> l3 [[texture(3)]],
                              constant PaneUniforms& u [[buffer(0)]]) {
 
-    // --- the gap ----------------------------------------------------------
-    // Nothing at the hinge, growing toward the top. This is the whole effect:
-    // clear where the glass touches the display, frosted where it lifts away.
-    float height = 1.0 - in.uv.y;                     // 0 at the hinge, 1 at the top
-    float gap = pow(height, u.gapCurve) * sin(u.foldRadians);
-    float frost = clamp(gap * u.frostAmount, 0.0, 1.0);
-
-    if (frost <= 0.0005) { discard_fragment(); }
-
     // --- silhouette -------------------------------------------------------
     // Only the free corners are rounded; the hinged edge runs straight along
     // the bottom of the display.
     float2 P = float2(in.pane.x * u.aspect, in.pane.y);
     float radius = u.cornerRadius * 0.95;
+    // The hinged edge is pinned to the display, so it is a hard cut — the quad
+    // simply ends there. Only the free edges and corners fall off.
     float d = (in.pane.y > 0.0)
         ? sdRoundBox(P, float2(u.aspect, 1.0), radius)
-        : max(abs(P.x) - u.aspect, -P.y - 1.0);
+        : abs(P.x) - u.aspect;
 
-    float feather = 0.003 + u.edgeSoftness * 0.30;
+    // Fall-off closes up toward the hinge, where the glass meets the display.
+    float feather = 0.0015 + u.edgeSoftness * 0.18 * in.lift;
     float mask = 1.0 - smoothstep(-feather, 0.0, d);
-    if (mask <= 0.001) { discard_fragment(); }
+    if (mask <= 0.002) { discard_fragment(); }
+
+    // --- the gap ----------------------------------------------------------
+    // Nothing at the hinge, growing toward the free edge. Clear where the
+    // glass touches the display, frosted where it lifts away.
+    float gap = pow(in.lift, u.gapCurve) * sin(u.foldRadians);
+    float frost = clamp(gap * u.frostAmount, 0.0, 1.0);
 
     // --- material ---------------------------------------------------------
     float2 g = in.pane * u.grainScale;
     float n1 = valueNoise(g) * 2.0 - 1.0;
     float n2 = valueNoise(g + 31.7) * 2.0 - 1.0;
 
-    // Etched glass displaces as well as diffuses, and it displaces more where
-    // the gap is wider.
+    // Etched glass displaces as well as diffuses, and more so where the gap
+    // is wider.
     float2 jitter = float2(n1, n2) * 0.0015 * frost;
     float2 uv = clamp(in.uv + jitter, 0.0, 1.0);
 
@@ -212,11 +236,11 @@ fragment half4 pane_fragment(PaneOut in [[stage_in]],
     // Grain in the material itself — a gentle modulation, not a dusting of noise.
     col *= half(1.0 + n1 * 0.03 * u.grainAmount * frost);
 
-    // Opaque wherever there is any frost at all, so the sharp frame underneath
-    // never shows through and double-exposes the blurred one. The thin ramp
-    // keeps the hinge edge from cutting a hard line across the display.
-    float alpha = mask * u.opacity * smoothstep(0.0, 0.02, frost);
-    return half4(clamp(col, 0.0h, 1.0h), half(alpha));
+    // Less light reaches the eye as the pane leans away and the gap widens,
+    // so the glass darkens toward its free edge as the fold goes in.
+    col *= half(max(0.0, 1.0 - u.dim * gap));
+
+    return half4(clamp(col, 0.0h, 1.0h), half(mask * u.opacity));
 }
 """
 }

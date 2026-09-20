@@ -26,6 +26,8 @@ final class Settings: ObservableObject {
     @Published var intensity: Intensity          { didSet { persist(intensity.rawValue, "intensity") } }
     @Published var perspective: Double           { didSet { persist(perspective, "perspective") } }
     @Published var edgeSoftness: Double          { didSet { persist(edgeSoftness, "edgeSoftness") } }
+    /// How much the glass darkens as the gap opens.
+    @Published var dimming: Double               { didSet { persist(dimming, "dimming") } }
     /// In points, so it can be matched to the display's own corner rounding.
     @Published var cornerRadius: Double          { didSet { persist(cornerRadius, "cornerRadiusPt") } }
     @Published var responsiveness: Double        { didSet { persist(responsiveness, "responsiveness") } }
@@ -52,7 +54,8 @@ final class Settings: ObservableObject {
         enabled            = bool("enabled", true)
         intensity          = Intensity(rawValue: store.object(forKey: "intensity") as? Int ?? 1) ?? .medium
         perspective        = dbl("perspective", 0.5)
-        edgeSoftness       = dbl("edgeSoftness", 0.5)
+        edgeSoftness       = dbl("edgeSoftness", 0.4)
+        dimming            = dbl("dimming", 0.45)
         cornerRadius       = dbl("cornerRadiusPt", 33)
         responsiveness     = dbl("responsiveness", 0.3)
         hingeSensitivity   = dbl("hingeSensitivity", 0.7)
@@ -70,12 +73,13 @@ final class Settings: ObservableObject {
     }
 
     func resetToDefaults() {
-        for k in ["intensity", "perspective", "edgeSoftness", "cornerRadiusPt", "responsiveness",
+        for k in ["intensity", "perspective", "edgeSoftness", "dimming", "cornerRadiusPt", "responsiveness",
                   "hingeSensitivity", "movementThreshold", "stationaryFPS", "restAngle", "maxFold"] {
             d.removeObject(forKey: k)
         }
         intensity = .medium;        perspective = 0.5
-        edgeSoftness = 0.5;         cornerRadius = 33
+        edgeSoftness = 0.4;         dimming = 0.45
+        cornerRadius = 33
         responsiveness = 0.3;       hingeSensitivity = 0.7
         movementThreshold = 1.0;    stationaryFPS = .f30
         restAngle = 110;            maxFold = 68

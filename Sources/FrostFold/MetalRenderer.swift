@@ -11,6 +11,7 @@ final class MetalRenderer {
     private let downsamplePipeline: MTLRenderPipelineState
     private let blurPipeline: MTLRenderPipelineState
     private let copyPipeline: MTLRenderPipelineState
+    private let blackoutPipeline: MTLRenderPipelineState
     private let panePipeline: MTLRenderPipelineState
 
     /// Progressively smaller, progressively softer copies of the captured
@@ -63,11 +64,13 @@ final class MetalRenderer {
         guard let ds = pipeline("blit_vertex", "downsample_fragment", blending: false),
               let bl = pipeline("blit_vertex", "blur_fragment", blending: false),
               let cp = pipeline("blit_vertex", "copy_fragment", blending: false),
+              let bo = pipeline("blit_vertex", "blackout_fragment", blending: true),
               let pn = pipeline("pane_vertex", "pane_fragment", blending: true) else { return nil }
 
         downsamplePipeline = ds
         blurPipeline = bl
         copyPipeline = cp
+        blackoutPipeline = bo
         panePipeline = pn
     }
 
@@ -166,8 +169,7 @@ final class MetalRenderer {
                         opaqueBackground: Bool) {
         var uniforms = uniforms
 
-        let visible = uniforms.opacity > 0.001 && uniforms.frostAmount > 0.001
-                   && uniforms.foldRadians > 0.0001
+        let visible = uniforms.opacity > 0.001 && uniforms.foldRadians > 0.0001
 
         guard let source, visible || opaqueBackground else {
             // Nothing to show — clear to transparent so the desktop shows through.
@@ -214,7 +216,15 @@ final class MetalRenderer {
             }
             return
         }
+
+        // The picture has lifted away with the glass, so whatever the pane no
+        // longer covers has nothing left to show.
+        encoder.setRenderPipelineState(blackoutPipeline)
+        encoder.setFragmentBytes(&uniforms, length: MemoryLayout<Shaders.PaneUniforms>.stride, index: 0)
+        encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 3)
+
         encoder.setRenderPipelineState(panePipeline)
+        encoder.setVertexBytes(&uniforms, length: MemoryLayout<Shaders.PaneUniforms>.stride, index: 0)
         encoder.setFragmentBytes(&uniforms, length: MemoryLayout<Shaders.PaneUniforms>.stride, index: 0)
         encoder.setFragmentTexture(source, index: 0)
         encoder.setFragmentTexture(l1, index: 1)

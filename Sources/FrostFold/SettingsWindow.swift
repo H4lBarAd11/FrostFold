@@ -20,6 +20,8 @@ struct SettingsView: View {
                         note: "How hard the gap opens toward the top.")
                 percent("Edge softness", $settings.edgeSoftness,
                         note: "Fall-off at the pane's edges.")
+                percent("Dimming", $settings.dimming,
+                        note: "How far the glass darkens as the gap opens.")
                 measured("Corner radius", $settings.cornerRadius, 0...60, "%.0f pt",
                          note: "Rounding on the free corners, to match your display.")
             }

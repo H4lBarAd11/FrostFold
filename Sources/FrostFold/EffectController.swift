@@ -204,13 +204,11 @@ final class EffectController: ObservableObject {
 
         var u = Shaders.PaneUniforms()
         u.foldRadians = Float(tilt)
-        // Normalised so the top edge reaches the intensity's frost gain when
+        u.cameraDistance = Float(12.0 - 8.5 * s.perspective)   // 12 (flat) ... 3.5 (hard)
+        // Normalised so the free edge reaches the intensity's frost gain when
         // the fold is fully in, whatever the maximum tilt happens to be.
         u.frostAmount = s.intensity.frostGain / Float(max(0.05, sin(maxTilt)))
-        // "How hard the pane converges": a higher exponent keeps the lower half
-        // clear for longer and concentrates the milk at the top.
         u.gapCurve = Float(0.75 + 1.15 * s.perspective)
-        u.opacity = 1.0
         u.edgeSoftness = Float(s.edgeSoftness)
         // Pane-local y spans [-1, 1] across the display height, so one unit is
         // half the display in points.
@@ -219,7 +217,10 @@ final class EffectController: ObservableObject {
         u.grainAmount = 1.0
         u.aspect = view.aspect
         u.grainScale = SIMD2(Float(max(1, size.width / 7)), Float(max(1, size.height / 7)))
-        u.viewportSize = SIMD2(Float(max(1, size.width)), Float(max(1, size.height)))
+        // A short ramp keeps the blackout from popping in at the moment the
+        // fold engages, while the pane still covers the whole display.
+        u.opacity = Float(smoothstep(0, 0.04, fold01))
+        u.dim = Float(s.dimming)
         return u
     }
 }
