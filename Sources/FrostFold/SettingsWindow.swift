@@ -7,69 +7,46 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
-            Section("Material") {
+            Section("Effect") {
                 Picker("Intensity", selection: $settings.intensity) {
                     ForEach(Intensity.allCases) { Text($0.label).tag($0) }
                 }
                 .pickerStyle(.segmented)
-
-                Picker("Glass", selection: $settings.glassMode) {
-                    ForEach(GlassMode.allCases) { Text($0.label).tag($0) }
-                }
-                .pickerStyle(.segmented)
-                .help("Whether the pane carries a copy of the display, or is empty glass you see through.")
-
-                labelled("Perspective", $settings.perspective, 0...1,
-                         help: "How strongly the pane foreshortens as it leans away.")
-                labelled("Edge softness", $settings.edgeSoftness, 0...1,
-                         help: "Feathering where the glass meets the display.")
-                labelled("Corner radius", $settings.cornerRadius, 0...1,
-                         help: "Rounding of the pane's corners.")
+                .labelsHidden()
             }
 
-            Section("Motion") {
-                labelled("Responsiveness", $settings.responsiveness, 0...1,
-                         help: "Low trails the lid; high tracks it immediately.")
-                labelled("Hinge sensitivity", $settings.hingeSensitivity, 0...1,
-                         help: "Where in the lid's travel the fold does most of its work.")
-                LabeledContent("Minimum movement") {
-                    HStack {
-                        Slider(value: $settings.movementThreshold, in: 0.05...2.0)
-                        Text(String(format: "%.2f°", settings.movementThreshold))
-                            .monospacedDigit()
-                            .foregroundStyle(.secondary)
-                            .frame(width: 52, alignment: .trailing)
-                    }
-                }
-                LabeledContent("Resting angle") {
-                    HStack {
-                        Slider(value: $settings.restAngle, in: 60...170)
-                        Text(String(format: "%.0f°", settings.restAngle))
-                            .monospacedDigit()
-                            .foregroundStyle(.secondary)
-                            .frame(width: 52, alignment: .trailing)
-                    }
-                }
-                LabeledContent("Maximum fold") {
-                    HStack {
-                        Slider(value: $settings.maxFold, in: 10...85)
-                        Text(String(format: "%.0f°", settings.maxFold))
-                            .monospacedDigit()
-                            .foregroundStyle(.secondary)
-                            .frame(width: 52, alignment: .trailing)
-                    }
-                }
+            Section("Material") {
+                percent("Perspective", $settings.perspective,
+                        note: "How hard the gap opens toward the top.")
+                percent("Edge softness", $settings.edgeSoftness,
+                        note: "Fall-off at the pane's edges.")
+                measured("Corner radius", $settings.cornerRadius, 0...60, "%.0f pt",
+                         note: "Rounding on the free corners, to match your display.")
+            }
+
+            Section("Feel") {
+                percent("Responsiveness", $settings.responsiveness,
+                        note: "How tightly the fold tracks your hand.")
+                percent("Hinge sensitivity", $settings.hingeSensitivity,
+                        note: "How quickly the fold rises once the lid moves.")
+                measured("Minimum movement", $settings.movementThreshold, 0.1...5, "%.1f°",
+                         note: "How far the lid must move from rest before the fold starts.")
+                measured("Engages at", $settings.restAngle, 60...170, "%.0f°",
+                         note: "Above this angle the pane lies flat and nothing renders.")
+                measured("Maximum fold", $settings.maxFold, 10...85, "%.0f°",
+                         note: "How far the pane lifts off the display when fully folded.")
+            }
+
+            Section("Performance") {
                 Picker("Stationary frame rate", selection: $settings.stationaryFPS) {
                     ForEach(StationaryFPS.allCases) { Text($0.label).tag($0) }
                 }
-            }
-
-            Section("Menu bar") {
-                Toggle("Show lid angle", isOn: $settings.showAngleInMenuBar)
+                .pickerStyle(.segmented)
+                Toggle("Show lid angle in the menu bar", isOn: $settings.showAngleInMenuBar)
             }
 
             Section {
-                HStack {
+                HStack(alignment: .firstTextBaseline) {
                     statusLine
                     Spacer()
                     Button("Reset") { settings.resetToDefaults() }
@@ -77,7 +54,7 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 440)
+        .frame(width: 460)
         .fixedSize(horizontal: false, vertical: true)
     }
 
@@ -89,25 +66,42 @@ struct SettingsView: View {
                 .foregroundStyle(.orange)
                 .fixedSize(horizontal: false, vertical: true)
         } else if controller.sensorAvailable {
-            Text(String(format: "Lid angle: %.1f°", controller.angle))
+            Text(String(format: "Lid %.1f° · engages at %.0f°",
+                        controller.angle, settings.restAngle))
                 .font(.caption)
                 .monospacedDigit()
                 .foregroundStyle(.secondary)
         }
     }
 
-    private func labelled(_ title: String, _ value: Binding<Double>,
-                          _ range: ClosedRange<Double>, help: String) -> some View {
-        LabeledContent(title) {
+    private func percent(_ title: String, _ value: Binding<Double>, note: String) -> some View {
+        slider(title, value, 0...1, { String(format: "%.0f%%", $0 * 100) }, note)
+    }
+
+    private func measured(_ title: String, _ value: Binding<Double>,
+                          _ range: ClosedRange<Double>, _ format: String,
+                          note: String) -> some View {
+        slider(title, value, range, { String(format: format, $0) }, note)
+    }
+
+    private func slider(_ title: String, _ value: Binding<Double>,
+                        _ range: ClosedRange<Double>,
+                        _ readout: @escaping (Double) -> String,
+                        _ note: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
             HStack {
-                Slider(value: value, in: range)
-                Text(String(format: "%.0f%%", value.wrappedValue * 100))
+                Text(title)
+                Spacer()
+                Text(readout(value.wrappedValue))
                     .monospacedDigit()
                     .foregroundStyle(.secondary)
-                    .frame(width: 52, alignment: .trailing)
             }
+            Slider(value: value, in: range)
+            Text(note)
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
-        .help(help)
+        .padding(.vertical, 2)
     }
 }
 

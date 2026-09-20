@@ -2,8 +2,8 @@ import Metal
 import QuartzCore
 import simd
 
-/// Builds the frosted pane: reduce the captured frame, diffuse it, then draw it
-/// onto a hinged quad with the etched-glass fragment shader.
+/// Builds the frosted pane: reduce the captured frame into a blur pyramid, then
+/// draw it over the display with a frost gradient driven by the pane's gap.
 final class MetalRenderer {
 
     let device: MTLDevice
@@ -13,11 +13,20 @@ final class MetalRenderer {
     private let copyPipeline: MTLRenderPipelineState
     private let panePipeline: MTLRenderPipelineState
 
-    // Ping-pong scratch for the reduce/blur chain.
-    private var half: MTLTexture?
-    private var quarter: MTLTexture?
-    private var scratch: MTLTexture?
-    private var chainSize: (Int, Int) = (0, 0)
+    /// Progressively smaller, progressively softer copies of the captured
+    /// frame. The fragment shader walks these by the local frost amount, which
+    /// defocuses rather than merely hazing.
+    private struct Pyramid {
+        var half: MTLTexture
+        var quarter: MTLTexture
+        var quarterTmp: MTLTexture
+        var eighth: MTLTexture
+        var eighthTmp: MTLTexture
+        var sixteenth: MTLTexture
+        var sixteenthTmp: MTLTexture
+    }
+    private var pyramid: Pyramid?
+    private var pyramidSize: (Int, Int) = (0, 0)
 
     init?() {
         guard let device = MTLCreateSystemDefaultDevice(),
@@ -73,13 +82,21 @@ final class MetalRenderer {
         return device.makeTexture(descriptor: desc)
     }
 
-    private func ensureChain(for source: MTLTexture) {
+    private func ensurePyramid(for source: MTLTexture) {
         let key = (source.width, source.height)
-        guard key != chainSize else { return }
-        chainSize = key
-        half = makeTexture(key.0 / 2, key.1 / 2)
-        quarter = makeTexture(key.0 / 4, key.1 / 4)
-        scratch = makeTexture(key.0 / 4, key.1 / 4)
+        guard key != pyramidSize || pyramid == nil else { return }
+        pyramidSize = key
+        let (w, h) = key
+        guard let half = makeTexture(w / 2, h / 2),
+              let quarter = makeTexture(w / 4, h / 4),
+              let quarterTmp = makeTexture(w / 4, h / 4),
+              let eighth = makeTexture(w / 8, h / 8),
+              let eighthTmp = makeTexture(w / 8, h / 8),
+              let sixteenth = makeTexture(w / 16, h / 16),
+              let sixteenthTmp = makeTexture(w / 16, h / 16) else { pyramid = nil; return }
+        pyramid = Pyramid(half: half, quarter: quarter, quarterTmp: quarterTmp,
+                          eighth: eighth, eighthTmp: eighthTmp,
+                          sixteenth: sixteenth, sixteenthTmp: sixteenthTmp)
     }
 
     private func fullscreenPass(_ buffer: MTLCommandBuffer,
@@ -101,10 +118,19 @@ final class MetalRenderer {
         encoder.endEncoding()
     }
 
+    /// One horizontal plus one vertical pass, via the scratch texture.
+    private func blur(_ buffer: MTLCommandBuffer, _ texture: MTLTexture, _ scratch: MTLTexture,
+                      passes: Int = 1) {
+        for _ in 0..<passes {
+            fullscreenPass(buffer, pipeline: blurPipeline, source: texture, target: scratch,
+                           blur: .init(direction: SIMD2(1, 0)))
+            fullscreenPass(buffer, pipeline: blurPipeline, source: scratch, target: texture,
+                           blur: .init(direction: SIMD2(0, 1)))
+        }
+    }
+
     // MARK: - Frame
 
-    /// Draws one frame. Pass `source == nil` to clear the layer to fully
-    /// transparent (used when the effect is idle).
     /// `opaqueBackground` paints the captured display behind the pane; the
     /// preview window needs it, the live overlay does not (the real desktop is
     /// already there).
@@ -140,7 +166,10 @@ final class MetalRenderer {
                         opaqueBackground: Bool) {
         var uniforms = uniforms
 
-        guard let source, uniforms.opacity > 0.001 || opaqueBackground else {
+        let visible = uniforms.opacity > 0.001 && uniforms.frostAmount > 0.001
+                   && uniforms.foldRadians > 0.0001
+
+        guard let source, visible || opaqueBackground else {
             // Nothing to show — clear to transparent so the desktop shows through.
             let desc = MTLRenderPassDescriptor()
             desc.colorAttachments[0].texture = target
@@ -151,27 +180,26 @@ final class MetalRenderer {
             return
         }
 
-        ensureChain(for: source)
-
         if opaqueBackground {
             fullscreenPass(buffer, pipeline: copyPipeline, source: source, target: target)
         }
 
-        var diffused = source
-        if let half, let quarter, let scratch {
-            fullscreenPass(buffer, pipeline: downsamplePipeline, source: source, target: half)
-            fullscreenPass(buffer, pipeline: downsamplePipeline, source: half, target: quarter)
+        ensurePyramid(for: source)
 
-            // Heavier frost earns extra separable passes rather than a wider,
-            // more expensive kernel.
-            let iterations = 1 + Int((uniforms.scatter * 2).rounded())
-            for _ in 0..<iterations {
-                fullscreenPass(buffer, pipeline: blurPipeline, source: quarter, target: scratch,
-                               blur: .init(direction: SIMD2(1, 0)))
-                fullscreenPass(buffer, pipeline: blurPipeline, source: scratch, target: quarter,
-                               blur: .init(direction: SIMD2(0, 1)))
-            }
-            diffused = quarter
+        // Build the pyramid: each level is smaller and softer than the last.
+        var l1 = source, l2 = source, l3 = source
+        if let p = pyramid, visible {
+            fullscreenPass(buffer, pipeline: downsamplePipeline, source: source, target: p.half)
+            fullscreenPass(buffer, pipeline: downsamplePipeline, source: p.half, target: p.quarter)
+            blur(buffer, p.quarter, p.quarterTmp)
+
+            fullscreenPass(buffer, pipeline: downsamplePipeline, source: p.quarter, target: p.eighth)
+            blur(buffer, p.eighth, p.eighthTmp, passes: 2)
+
+            fullscreenPass(buffer, pipeline: downsamplePipeline, source: p.eighth, target: p.sixteenth)
+            blur(buffer, p.sixteenth, p.sixteenthTmp, passes: 3)
+
+            l1 = p.quarter; l2 = p.eighth; l3 = p.sixteenth
         }
 
         let desc = MTLRenderPassDescriptor()
@@ -180,12 +208,18 @@ final class MetalRenderer {
         desc.colorAttachments[0].clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 0)
         desc.colorAttachments[0].storeAction = .store
 
-        guard let encoder = buffer.makeRenderCommandEncoder(descriptor: desc) else { return }
+        guard visible, let encoder = buffer.makeRenderCommandEncoder(descriptor: desc) else {
+            if !opaqueBackground {
+                buffer.makeRenderCommandEncoder(descriptor: desc)?.endEncoding()
+            }
+            return
+        }
         encoder.setRenderPipelineState(panePipeline)
-        encoder.setVertexBytes(&uniforms, length: MemoryLayout<Shaders.PaneUniforms>.stride, index: 0)
         encoder.setFragmentBytes(&uniforms, length: MemoryLayout<Shaders.PaneUniforms>.stride, index: 0)
         encoder.setFragmentTexture(source, index: 0)
-        encoder.setFragmentTexture(diffused, index: 1)
+        encoder.setFragmentTexture(l1, index: 1)
+        encoder.setFragmentTexture(l2, index: 2)
+        encoder.setFragmentTexture(l3, index: 3)
         encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
         encoder.endEncoding()
     }

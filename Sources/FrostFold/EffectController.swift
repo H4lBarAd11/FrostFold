@@ -188,9 +188,7 @@ final class EffectController: ObservableObject {
 
         if let preview = previewView {
             let a = scrubAngle ?? angle
-            var u = makeUniforms(angle: a, view: preview)
-            // The preview should read clearly even at rest, so never fully fade.
-            u.opacity = max(u.opacity, settings.intensity.opacity * 0.04)
+            let u = makeUniforms(angle: a, view: preview)
             renderer.render(to: preview.metalLayer, source: source, uniforms: u,
                             opaqueBackground: true)
         }
@@ -201,18 +199,27 @@ final class EffectController: ObservableObject {
         let fold01 = s.fold(forLidAngle: angle)
         let size = view.metalLayer.drawableSize
 
+        let maxTilt = s.maxFold * .pi / 180.0
+        let tilt = fold01 * maxTilt
+
         var u = Shaders.PaneUniforms()
-        u.foldRadians = Float(fold01 * s.maxFold * .pi / 180.0)
-        u.cameraDistance = Float(12.0 - 8.5 * s.perspective)   // 12 (flat) ... 3.5 (strong)
-        u.scatter = s.intensity.scatter
-        u.opacity = s.intensity.opacity * Float(smoothstep(0, 0.08, fold01))
+        u.foldRadians = Float(tilt)
+        // Normalised so the top edge reaches the intensity's frost gain when
+        // the fold is fully in, whatever the maximum tilt happens to be.
+        u.frostAmount = s.intensity.frostGain / Float(max(0.05, sin(maxTilt)))
+        // "How hard the pane converges": a higher exponent keeps the lower half
+        // clear for longer and concentrates the milk at the top.
+        u.gapCurve = Float(0.75 + 1.15 * s.perspective)
+        u.opacity = 1.0
         u.edgeSoftness = Float(s.edgeSoftness)
-        u.cornerRadius = Float(s.cornerRadius)
+        // Pane-local y spans [-1, 1] across the display height, so one unit is
+        // half the display in points.
+        let halfHeightPoints = max(1.0, (view.window?.frame.height ?? 800) / 2)
+        u.cornerRadius = Float(min(0.9, s.cornerRadius / halfHeightPoints))
         u.grainAmount = 1.0
         u.aspect = view.aspect
-        u.grainScale = SIMD2(Float(max(1, size.width / 14)), Float(max(1, size.height / 14)))
+        u.grainScale = SIMD2(Float(max(1, size.width / 7)), Float(max(1, size.height / 7)))
         u.viewportSize = SIMD2(Float(max(1, size.width)), Float(max(1, size.height)))
-        u.mode = Int32(s.glassMode.rawValue)
         return u
     }
 }

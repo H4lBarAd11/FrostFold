@@ -136,10 +136,6 @@ func writePNG(_ tex: MTLTexture, to path: String) {
     CGImageDestinationFinalize(dest)
 }
 
-func smoothstep(_ a: Double, _ b: Double, _ x: Double) -> Double {
-    let t = max(0, min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t)
-}
-
 guard let renderer = MetalRenderer() else {
     FileHandle.standardError.write("error: could not create the Metal renderer\n".data(using: .utf8)!)
     exit(1)
@@ -152,40 +148,33 @@ let outDesc = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .bgra8Unorm,
 outDesc.usage = [.renderTarget, .shaderRead]
 outDesc.storageMode = .shared
 
-let modes: [(GlassMode, String)] = {
-    switch modeArg {
-    case "lift":       return [(.lift, "lift")]
-    case "seethrough": return [(.seeThrough, "seethrough")]
-    default:           return [(.lift, "lift"), (.seeThrough, "seethrough")]
-    }
-}()
-
 let settings = Settings.shared
 print("background \(W)×\(H)  →  \(outDir)/")
 
-for (mode, name) in modes {
-    for angle in angles {
-        let fold = settings.fold(forLidAngle: angle)
+for angle in angles {
+    let fold = settings.fold(forLidAngle: angle)
+    let maxTilt = settings.maxFold * .pi / 180
+    let tilt = fold * maxTilt
 
-        var u = Shaders.PaneUniforms()
-        u.foldRadians    = Float(fold * settings.maxFold * .pi / 180)
-        u.cameraDistance = Float(12.0 - 8.5 * settings.perspective)
-        u.scatter        = settings.intensity.scatter
-        u.opacity        = settings.intensity.opacity * Float(smoothstep(0, 0.08, fold))
-        u.edgeSoftness   = Float(settings.edgeSoftness)
-        u.cornerRadius   = Float(settings.cornerRadius)
-        u.grainAmount    = 1
-        u.aspect         = Float(W) / Float(H)
-        u.grainScale     = SIMD2(Float(W) / 14, Float(H) / 14)
-        u.viewportSize   = SIMD2(Float(W), Float(H))
-        u.mode           = Int32(mode.rawValue)
+    var u = Shaders.PaneUniforms()
+    u.foldRadians  = Float(tilt)
+    u.frostAmount  = settings.intensity.frostGain / Float(max(0.05, sin(maxTilt)))
+    u.gapCurve     = Float(0.75 + 1.15 * settings.perspective)
+    u.opacity      = 1
+    u.edgeSoftness = Float(settings.edgeSoftness)
+    // The synthetic desktop stands in for a display of the same pixel height.
+    u.cornerRadius = Float(min(0.9, settings.cornerRadius / (Double(H) / 2)))
+    u.grainAmount  = 1
+    u.aspect       = Float(W) / Float(H)
+    u.grainScale   = SIMD2(Float(W) / 7, Float(H) / 7)
+    u.viewportSize = SIMD2(Float(W), Float(H))
 
-        let target = device.makeTexture(descriptor: outDesc)!
-        renderer.render(to: target, source: source, uniforms: u, opaqueBackground: true)
+    let target = device.makeTexture(descriptor: outDesc)!
+    renderer.render(to: target, source: source, uniforms: u, opaqueBackground: true)
 
-        let file = String(format: "%@/%@-%03.0f.png", outDir, name, angle)
-        writePNG(target, to: file)
-        print(String(format: "  %-11@ lid %5.1f°  fold %.3f  tilt %4.1f°", name, angle, fold,
-                     Double(u.foldRadians) * 180 / .pi))
-    }
+    let file = String(format: "%@/fold-%03.0f.png", outDir, angle)
+    writePNG(target, to: file)
+    print(String(format: "  lid %5.1f°  fold %.3f  tilt %4.1f°  frost@top %.2f",
+                 angle, fold, tilt * 180 / .pi,
+                 min(1.0, Double(u.frostAmount) * sin(tilt))))
 }

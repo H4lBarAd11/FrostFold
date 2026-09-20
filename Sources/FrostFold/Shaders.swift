@@ -6,20 +6,23 @@ import simd
 enum Shaders {
 
 /// Mirrors `PaneUniforms` in the Metal source below. Field order and padding
-/// must stay in lockstep.
+/// must stay in lockstep (48 bytes, 8-byte aligned).
 struct PaneUniforms {
+    /// Tilt of the pane away from the display, in radians. Drives the gap.
     var foldRadians: Float = 0
-    var cameraDistance: Float = 8
-    var scatter: Float = 0
-    var opacity: Float = 0
+    /// Frost at the top edge, 0...1+. The gradient scales down to 0 at the hinge.
+    var frostAmount: Float = 0
+    /// Shapes how the gap opens with height. 1 is linear.
+    var gapCurve: Float = 1
+    /// Global fade, used to bring the pane in and out.
+    var opacity: Float = 1
     var edgeSoftness: Float = 0
+    /// Corner rounding of the free (top) corners, as a fraction of pane height.
     var cornerRadius: Float = 0
     var grainAmount: Float = 1
     var aspect: Float = 1.6
     var grainScale: SIMD2<Float> = .init(120, 75)
     var viewportSize: SIMD2<Float> = .init(1, 1)
-    var mode: Int32 = 0          // 0 = lift a copy, 1 = see through
-    var _pad: Float = 0
 }
 
 struct BlurUniforms {
@@ -32,8 +35,8 @@ using namespace metal;
 
 struct PaneUniforms {
     float  foldRadians;
-    float  cameraDistance;
-    float  scatter;
+    float  frostAmount;
+    float  gapCurve;
     float  opacity;
     float  edgeSoftness;
     float  cornerRadius;
@@ -41,8 +44,6 @@ struct PaneUniforms {
     float  aspect;
     float2 grainScale;
     float2 viewportSize;
-    int    mode;          // 0 = lift a copy of the display, 1 = see through
-    float  _pad;
 };
 
 struct BlurUniforms { float2 direction; };
@@ -64,8 +65,12 @@ vertex BlitOut blit_vertex(uint vid [[vertex_id]]) {
     return out;
 }
 
-// Four-tap box reduction; run repeatedly to walk the capture down to a cheap
-// resolution before blurring.
+fragment half4 copy_fragment(BlitOut in [[stage_in]],
+                             texture2d<half> src [[texture(0)]]) {
+    return src.sample(linearSampler, in.uv);
+}
+
+// Four-tap box reduction; run repeatedly to walk the capture down the pyramid.
 fragment half4 downsample_fragment(BlitOut in [[stage_in]],
                                    texture2d<half> src [[texture(0)]]) {
     float2 texel = 1.0 / float2(src.get_width(), src.get_height());
@@ -74,11 +79,6 @@ fragment half4 downsample_fragment(BlitOut in [[stage_in]],
     c += src.sample(linearSampler, in.uv + texel * float2(-0.5,  0.5));
     c += src.sample(linearSampler, in.uv + texel * float2( 0.5,  0.5));
     return c * 0.25h;
-}
-
-fragment half4 copy_fragment(BlitOut in [[stage_in]],
-                             texture2d<half> src [[texture(0)]]) {
-    return src.sample(linearSampler, in.uv);
 }
 
 // Separable Gaussian, nine taps via five linearly-interpolated fetches.
@@ -103,34 +103,21 @@ fragment half4 blur_fragment(BlitOut in [[stage_in]],
 
 struct PaneOut {
     float4 position [[position]];
-    float2 uv;       // into the captured display texture
-    float2 pane;     // pane-local coordinates, [-1,1] on both axes
-    float  lift;     // 0 at the hinge, 1 at the free edge
+    float2 uv;     // screen-space, and therefore also display-texture space
+    float2 pane;   // pane-local, [-1,1] on both axes
 };
 
-vertex PaneOut pane_vertex(uint vid [[vertex_id]],
-                           constant PaneUniforms& u [[buffer(0)]]) {
-    // Triangle strip over the unit quad.
+// The pane covers the display. It is hinged along the bottom edge and tilts
+// away from the screen, but it does not carry a copy of the display with it —
+// what you see through it stays exactly where it is. Only the gap changes.
+vertex PaneOut pane_vertex(uint vid [[vertex_id]]) {
     const float2 corners[4] = { float2(-1,-1), float2(1,-1), float2(-1,1), float2(1,1) };
     float2 p = corners[vid];
 
-    // Hinge runs along the bottom edge (y = -1); the pane rotates about it,
-    // +z toward the viewer.
-    float h = p.y + 1.0;
-    float c = cos(u.foldRadians);
-    float s = sin(u.foldRadians);
-    float y = h * c - 1.0;
-    float z = h * s;
-
-    // Leave the divide to the rasteriser so the texture stays perspective
-    // correct across the whole pane.
-    float w = (u.cameraDistance - z) / u.cameraDistance;
-
     PaneOut out;
-    out.position = float4(p.x, y, 0.0, w);
+    out.position = float4(p, 0.0, 1.0);
     out.uv       = float2(p.x * 0.5 + 0.5, 0.5 - p.y * 0.5);
     out.pane     = p;
-    out.lift     = h * 0.5;
     return out;
 }
 
@@ -159,66 +146,76 @@ static inline float sdRoundBox(float2 p, float2 b, float r) {
     return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
 }
 
+// A blur pyramid sampled continuously. Crossfading a single blurred copy
+// against the sharp frame reads as haze laid over a still-sharp picture;
+// walking the pyramid genuinely defocuses, which is what a diffuser does.
+static inline half4 pyramid(float t, float2 uv,
+                            texture2d<half> l0, texture2d<half> l1,
+                            texture2d<half> l2, texture2d<half> l3) {
+    if (t <= 0.0) return l0.sample(linearSampler, uv);
+    if (t < 1.0)  return mix(l0.sample(linearSampler, uv),
+                             l1.sample(linearSampler, uv), half(t));
+    if (t < 2.0)  return mix(l1.sample(linearSampler, uv),
+                             l2.sample(linearSampler, uv), half(t - 1.0));
+    return mix(l2.sample(linearSampler, uv),
+               l3.sample(linearSampler, uv), half(min(t - 2.0, 1.0)));
+}
+
 fragment half4 pane_fragment(PaneOut in [[stage_in]],
-                             texture2d<half> sharpTex [[texture(0)]],
-                             texture2d<half> blurTex  [[texture(1)]],
+                             texture2d<half> l0 [[texture(0)]],
+                             texture2d<half> l1 [[texture(1)]],
+                             texture2d<half> l2 [[texture(2)]],
+                             texture2d<half> l3 [[texture(3)]],
                              constant PaneUniforms& u [[buffer(0)]]) {
 
+    // --- the gap ----------------------------------------------------------
+    // Nothing at the hinge, growing toward the top. This is the whole effect:
+    // clear where the glass touches the display, frosted where it lifts away.
+    float height = 1.0 - in.uv.y;                     // 0 at the hinge, 1 at the top
+    float gap = pow(height, u.gapCurve) * sin(u.foldRadians);
+    float frost = clamp(gap * u.frostAmount, 0.0, 1.0);
+
+    if (frost <= 0.0005) { discard_fragment(); }
+
     // --- silhouette -------------------------------------------------------
+    // Only the free corners are rounded; the hinged edge runs straight along
+    // the bottom of the display.
     float2 P = float2(in.pane.x * u.aspect, in.pane.y);
-    float2 halfExtent = float2(u.aspect, 1.0);
     float radius = u.cornerRadius * 0.95;
-    float d = sdRoundBox(P, halfExtent, radius);
+    float d = (in.pane.y > 0.0)
+        ? sdRoundBox(P, float2(u.aspect, 1.0), radius)
+        : max(abs(P.x) - u.aspect, -P.y - 1.0);
 
     float feather = 0.003 + u.edgeSoftness * 0.30;
     float mask = 1.0 - smoothstep(-feather, 0.0, d);
-    if (mask <= 0.001h) { discard_fragment(); }
+    if (mask <= 0.001) { discard_fragment(); }
 
     // --- material ---------------------------------------------------------
-    // Grain is keyed to pane-local coordinates, so it lives in the glass and
-    // travels with it rather than sitting on the display behind.
     float2 g = in.pane * u.grainScale;
     float n1 = valueNoise(g) * 2.0 - 1.0;
     float n2 = valueNoise(g + 31.7) * 2.0 - 1.0;
 
-    // Scattering grows with distance from the hinge: the further the glass
-    // stands off the display, the more it diffuses what is behind it.
-    float frost = clamp(u.scatter * (0.55 + 0.45 * in.lift), 0.0, 1.0);
+    // Etched glass displaces as well as diffuses, and it displaces more where
+    // the gap is wider.
+    float2 jitter = float2(n1, n2) * 0.0015 * frost;
+    float2 uv = clamp(in.uv + jitter, 0.0, 1.0);
 
-    // Etched glass displaces as well as diffuses, but the displacement belongs
-    // on the diffuse lobe only. Jittering the sharp sample turns the pane into
-    // static rather than glass.
-    float2 jitter = float2(n1, n2) * 0.0022 * frost;
-
-    // Mode 0 carries a copy of the display on the pane, so the image lifts and
-    // leans with the glass. Mode 1 keeps the pane empty and shows whatever lies
-    // behind it on the real display, refracted by the tilt.
-    float2 base;
-    if (u.mode == 0) {
-        base = in.uv;
-    } else {
-        base = in.position.xy / u.viewportSize;
-        // A tilted pane pushes what is behind it away from the hinge.
-        base.y -= sin(u.foldRadians) * in.lift * 0.035;
-    }
-
-    half4 sharp = sharpTex.sample(linearSampler, clamp(base, 0.0, 1.0));
-    half4 diffuse = blurTex.sample(linearSampler, clamp(base + jitter, 0.0, 1.0));
-    half3 col = mix(sharp.rgb, diffuse.rgb, half(frost));
+    // Walk the pyramid by the local frost. Three intervals across four levels.
+    half3 col = pyramid(frost * 3.0, uv, l0, l1, l2, l3).rgb;
 
     // Milkiness, not reflection: etched glass scatters light, it does not
     // mirror it, so there is no specular term anywhere in here.
     half lum = dot(col, half3(0.2126h, 0.7152h, 0.0722h));
-    col = mix(col, half3(lum), half(0.16 * frost));
+    col = mix(col, half3(lum), half(0.17 * frost));
+    col += half3(half(0.045 * frost));
 
     // Grain in the material itself — a gentle modulation, not a dusting of noise.
-    col *= half(1.0 + n1 * 0.045 * u.grainAmount * frost);
+    col *= half(1.0 + n1 * 0.03 * u.grainAmount * frost);
 
-    // Transmission falls off as the pane leans away from the viewer.
-    float grazing = 1.0 - 0.18 * in.lift * sin(u.foldRadians);
-    col *= half(grazing);
-
-    float alpha = mask * u.opacity;
+    // Opaque wherever there is any frost at all, so the sharp frame underneath
+    // never shows through and double-exposes the blurred one. The thin ramp
+    // keeps the hinge edge from cutting a hard line across the display.
+    float alpha = mask * u.opacity * smoothstep(0.0, 0.02, frost);
     return half4(clamp(col, 0.0h, 1.0h), half(alpha));
 }
 """
