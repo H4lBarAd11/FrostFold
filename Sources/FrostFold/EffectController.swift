@@ -265,11 +265,17 @@ final class EffectController: ObservableObject {
         // blackout arrived effectively as a step.
         u.opacity = Float(smoothstep(0, 0.14, fold01))
         u.dim = Float(s.dimming)
-        // The pane converges from the very first degree, so it uncovers a
-        // hairline at the edges almost at once. Filling that with black
-        // straight away reads as a glitch; let it show the real display and
-        // bring the fill in once the uncovered region is actually a region.
-        u.blackout = Float(smoothstep(0.10, 0.32, fold01))
+        // How much of the display the converged pane has actually uncovered,
+        // as a fraction of its height. Tie the fill to that rather than to the
+        // fold: a hairline of live display is invisible, but once the pane has
+        // moved far enough for its copy to sit visibly offset, anything left
+        // showing behind it reads as a doubled image.
+        let camera = Double(u.cameraDistance)
+        let topY = 2 * cos(tilt) - 1
+        let topW = (camera + 2 * sin(tilt)) / camera
+        let uncovered = max(0, 1 - topY / topW) / 2
+        // ~1px in, ~11px fully in, on a 950pt display.
+        u.blackout = Float(smoothstep(0.001, 0.012, uncovered))
         return u
     }
 }
