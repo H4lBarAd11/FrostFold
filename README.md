@@ -27,8 +27,8 @@ from anyone else's source, assets or wording.
 </p>
 
 <p align="center">
-  <sub>Stills are rendered from a synthetic desktop, so none of mine ends up in the repository.<br>
-  Regenerate them from your own screenshot: <code>Scripts/filmstrip.sh --input shot.png --out docs/readme</code></sub>
+  <sub>Stills are rendered over a screenshot of my own desktop, by the same arithmetic the app runs.<br>
+  Make them from yours: <code>Scripts/stills.sh shot.png</code></sub>
 </p>
 
 ## Status
@@ -72,8 +72,8 @@ so the glass darkens along with the gap.
 </tr>
 </table>
 
-Look at the bottom edge of any window in the last two: it stays sharp while its
-own title bar has dissolved.
+Look at the book spines in the last two: the titles stay legible down by the
+hinge while the menu bar at the top has dissolved.
 
 ## Requirements
 
@@ -268,7 +268,10 @@ code of any kind. Settings live in `UserDefaults`.
 dist/FrostFold.app/Contents/MacOS/FrostFold --selftest
 
 # Render the pane over a still image at a range of lid angles.
-Scripts/filmstrip.sh --input shot.png --out docs/readme
+Scripts/filmstrip.sh --input shot.png --out .build/filmstrip
+
+# The README's stills, at their names and sizes, from a screenshot of your own.
+Scripts/stills.sh shot.png
 
 # Redraw the app icon and repack Resources/FrostFold.icns.
 Scripts/icon.sh
