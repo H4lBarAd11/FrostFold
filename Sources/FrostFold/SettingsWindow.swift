@@ -206,27 +206,43 @@ private struct GlassPane: ViewModifier {
     private let shape = RoundedRectangle(cornerRadius: 22, style: .continuous)
 
     func body(content: Content) -> some View {
+        // `#available` decides at run time; `#if compiler` decides whether the
+        // SDK being compiled against knows the API at all. Both are needed:
+        // the Xcode 16 toolchain (macOS 15 and earlier) has no glassEffect,
+        // and CI builds there as well as on the current one.
+        #if compiler(>=6.2)
         if #available(macOS 26, *) {
             content
                 .glassEffect(.regular.tint(Palette.sageTintColor.opacity(0.45)), in: shape)
         } else {
-            content
-                .background(.thinMaterial, in: shape)
-                .background(Palette.sageTintColor.opacity(0.35), in: shape)
-                // The lit edge of a sheet of glass, not a drawn border.
-                .overlay(shape.strokeBorder(.white.opacity(0.45), lineWidth: 1))
+            fallback(content)
         }
+        #else
+        fallback(content)
+        #endif
+    }
+
+    private func fallback(_ content: Content) -> some View {
+        content
+            .background(.thinMaterial, in: shape)
+            .background(Palette.sageTintColor.opacity(0.35), in: shape)
+            // The lit edge of a sheet of glass, not a drawn border.
+            .overlay(shape.strokeBorder(.white.opacity(0.45), lineWidth: 1))
     }
 }
 
 /// The row of buttons, in glass to match the panes above them.
 private struct GlassButtons: ViewModifier {
     func body(content: Content) -> some View {
+        #if compiler(>=6.2)
         if #available(macOS 26, *) {
             content.buttonStyle(.glass)
         } else {
             content.buttonStyle(.bordered)
         }
+        #else
+        content.buttonStyle(.bordered)
+        #endif
     }
 }
 

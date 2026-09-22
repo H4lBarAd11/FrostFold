@@ -13,7 +13,14 @@ concurrency:
 jobs:
   build:
     name: Build and test
-    runs-on: macos-15
+    # Two toolchains on purpose. macOS 26 compiles the settings panel's
+    # Liquid Glass path; macOS 15 has no such API in its SDK and proves the
+    # `#if compiler` fallback still builds for anyone on the older tools.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, macos-26]
+    runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v4

@@ -28,6 +28,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var cancellables = Set<AnyCancellable>()
     private var requestTimer: Timer?
 
+    /// A window asked for on the command line, opened once startup is done.
+    var windowOnLaunch: String?
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         // No dock icon (LSUIElement) and no status item: FrostFold runs in the
         // background and is reached by launching it again.
@@ -50,6 +53,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Anything left over from a previous run is stale; don't act on it.
         _ = PendingWindow.take()
         watchForRequests()
+
+        switch windowOnLaunch {
+        case "preview":  openPreview()
+        case "settings": openSettings()
+        default: break
+        }
 
         controller.$statusMessage
             .receive(on: RunLoop.main)

@@ -64,10 +64,10 @@ app.delegate = delegate
 app.setActivationPolicy(.accessory)
 
 if arguments.contains("--settings") || arguments.contains("--preview") {
-    // Start normally, then surface the requested window once we are up.
-    DispatchQueue.main.async {
-        if arguments.contains("--preview") { delegate.openPreview() } else { delegate.openSettings() }
-    }
+    // Start normally, then surface the requested window once we are up. The
+    // delegate opens it after permission and the controller are in hand; a
+    // block queued here can run before either exists, and did.
+    delegate.windowOnLaunch = arguments.contains("--preview") ? "preview" : "settings"
 }
 
 app.run()
