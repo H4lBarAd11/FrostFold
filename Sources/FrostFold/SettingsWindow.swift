@@ -95,12 +95,16 @@ struct SettingsView: View {
                     // There is no menu bar item, so this is the way out.
                     Button("Quit") { NSApp.terminate(nil) }
                 }
+                .modifier(GlassButtons())
 
                 Text("FrostFold runs in the background. Launch it again to reopen these settings.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
             .padding(20)
+            // The title bar runs over the content so the glass is unbroken
+            // from the top edge down; leave room for it.
+            .padding(.top, 28)
             .frame(width: 780, alignment: .leading)
         }
         // Tint once at the root; controls inherit rather than being painted
@@ -113,7 +117,13 @@ struct SettingsView: View {
         // free to be the app's own colours. Decided, not overlooked.
         .tint(Palette.sageColor)
         .controlSize(.small)
-        .background(Palette.backgroundColor)
+        // The house ground is ivory, and it stays ivory — but as a wash over
+        // the blurred desktop behind the window rather than a solid plate.
+        // The window's own material (see the controller) does the blurring;
+        // this keeps the hue so the glass reads warm rather than grey. Under
+        // Reduce Transparency the material goes opaque and the wash sits on
+        // that, so nothing here needs to change.
+        .background(Palette.backgroundColor.opacity(0.55))
         // A ScrollView has no intrinsic size, so without an explicit frame the
         // hosting controller collapses it to nothing. Fixed height keeps the
         // panel wide and short, and lets it scroll if it ever outgrows this.
@@ -132,9 +142,8 @@ struct SettingsView: View {
             content()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(14)
-        .background(Palette.sageTintColor, in: RoundedRectangle(cornerRadius: 10))
-        .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Palette.lineColor, lineWidth: 1))
+        .padding(16)
+        .modifier(GlassPane())
     }
 
     @ViewBuilder
@@ -184,6 +193,43 @@ struct SettingsView: View {
     }
 }
 
+/// A section drawn as a pane of glass: the desktop shows through it, blurred,
+/// with the house sage as a faint wash. A solid tinted plate with a hairline
+/// border read as cardboard in an app whose whole point is glass.
+///
+/// On macOS 26 this is the system's own glass, which refracts and catches
+/// light at the edge; earlier systems get a thin material with a highlight
+/// stroke standing in for that edge. Both go opaque on their own under
+/// Reduce Transparency.
+private struct GlassPane: ViewModifier {
+    // Continuous corners, and larger than a control's: a pane, not a button.
+    private let shape = RoundedRectangle(cornerRadius: 22, style: .continuous)
+
+    func body(content: Content) -> some View {
+        if #available(macOS 26, *) {
+            content
+                .glassEffect(.regular.tint(Palette.sageTintColor.opacity(0.45)), in: shape)
+        } else {
+            content
+                .background(.thinMaterial, in: shape)
+                .background(Palette.sageTintColor.opacity(0.35), in: shape)
+                // The lit edge of a sheet of glass, not a drawn border.
+                .overlay(shape.strokeBorder(.white.opacity(0.45), lineWidth: 1))
+        }
+    }
+}
+
+/// The row of buttons, in glass to match the panes above them.
+private struct GlassButtons: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(macOS 26, *) {
+            content.buttonStyle(.glass)
+        } else {
+            content.buttonStyle(.bordered)
+        }
+    }
+}
+
 final class SettingsWindowController: NSWindowController {
     init(controller: EffectController, openPreview: @escaping () -> Void) {
         let root = SettingsView(settings: .shared, controller: controller, openPreview: openPreview)
@@ -199,14 +245,33 @@ final class SettingsWindowController: NSWindowController {
         let hosting = NSHostingView(rootView: root)
         hosting.frame = NSRect(origin: .zero, size: size)
         hosting.autoresizingMask = [.width, .height]
+        // The view pads for the title bar itself; don't let the safe area add
+        // a second helping.
+        hosting.safeAreaRegions = []
+
+        // The whole window is one sheet of glass over the desktop: blurred
+        // behind, the ivory wash on top, and the title bar drawn on the same
+        // sheet rather than as its own strip. The house rule keeps materials
+        // off a settings window's body; this is the stated exception, because
+        // the app is glass and a solid panel for its settings looked like a
+        // different app. Under Reduce Transparency the material renders
+        // opaque, which is the solid panel back again — as it should be.
+        let material = NSVisualEffectView(frame: NSRect(origin: .zero, size: size))
+        material.material = .popover
+        material.blendingMode = .behindWindow
+        material.state = .active
+        material.autoresizingMask = [.width, .height]
+        material.addSubview(hosting)
 
         let window = NSWindow(contentRect: NSRect(origin: .zero, size: size),
-                              styleMask: [.titled, .closable, .miniaturizable],
+                              styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView],
                               backing: .buffered,
                               defer: false)
         window.title = "FrostFold Settings"
-        window.contentView = hosting
-        window.backgroundColor = Palette.background
+        window.titlebarAppearsTransparent = true
+        window.isOpaque = false
+        window.backgroundColor = .clear
+        window.contentView = material
         window.isReleasedWhenClosed = false
         window.sharingType = .none
         window.center()

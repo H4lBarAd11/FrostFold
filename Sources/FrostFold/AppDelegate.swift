@@ -39,8 +39,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         self.controller = controller
 
-        guard requireScreenRecording() else { return }
+        withScreenRecording { [weak self] in self?.begin() }
+    }
 
+    /// Everything that needs the display: runs once Screen Recording is in hand.
+    private func begin() {
+        guard let controller else { return }
         controller.start()
 
         // Anything left over from a previous run is stale; don't act on it.
@@ -66,6 +70,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         requestTimer?.invalidate()
+        grantTimer?.invalidate()
         controller?.stop()
     }
 
@@ -90,18 +95,66 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Permission
 
+    private static let askedKey = "screenRecordingRequested"
+    private var grantTimer: Timer?
+
     /// Screen Recording isn't optional — the pane is built out of the live
-    /// display, so there is nothing to render without it.
-    private func requireScreenRecording() -> Bool {
-        if ScreenCapturer.hasPermission() { return true }
+    /// display, so there is nothing to render without it. Calls `proceed`
+    /// once it is granted; otherwise says what to do and quits.
+    private func withScreenRecording(then proceed: @escaping () -> Void) {
+        if ScreenCapturer.hasPermission() { proceed(); return }
 
-        // This call *is* the system prompt. Putting our own dialog in front of
-        // it only makes the user dismiss the same question twice.
-        if ScreenCapturer.requestPermission() { return true }
+        let defaults = UserDefaults.standard
+        let askedBefore = defaults.bool(forKey: Self.askedKey)
+        defaults.set(true, forKey: Self.askedKey)
 
-        // We get here either because they declined, or because macOS already
-        // had an answer on file and showed nothing at all — and that second
-        // case is the only one where a word from us actually helps.
+        // This call *is* the system prompt, and it returns false the moment
+        // the prompt is up — it never waits for the answer. So false means
+        // one of two things: the prompt is on screen right now, or macOS
+        // already has an answer on file and showed nothing at all.
+        if ScreenCapturer.requestPermission() { proceed(); return }
+
+        if !askedBefore {
+            // The prompt is on screen. Anything we put beside it is the same
+            // question asked twice, so keep quiet and wait for the grant.
+            awaitGrant()
+            return
+        }
+
+        // Nothing was shown, and only a word from us gets them to the switch.
+        explainScreenRecording()
+    }
+
+    /// The system prompt sends the user to System Settings; a grant made there
+    /// does not reach a process that is already running, which is why macOS
+    /// itself offers "Quit & Reopen". Watch for it and do that for them, so
+    /// FrostFold carries straight on whether or not they take macOS up on it.
+    private func awaitGrant() {
+        let deadline = Date().addingTimeInterval(3 * 60)
+        grantTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] timer in
+            if ScreenCapturer.hasPermission() {
+                timer.invalidate()
+                self?.relaunch()
+            } else if Date() > deadline {
+                // They walked away or declined. The next launch explains.
+                timer.invalidate()
+                NSApp.terminate(nil)
+            }
+        }
+    }
+
+    private func relaunch() {
+        let bundle = Bundle.main.bundlePath
+        let reopen = Process()
+        reopen.executableURL = URL(fileURLWithPath: "/bin/sh")
+        // Wait for this process to be gone before opening, or LaunchServices
+        // just hands the request to the copy that is about to exit.
+        reopen.arguments = ["-c", "while kill -0 \(ProcessInfo.processInfo.processIdentifier) 2>/dev/null; do sleep 0.1; done; exec /usr/bin/open \"$0\"", bundle]
+        try? reopen.run()
+        NSApp.terminate(nil)
+    }
+
+    private func explainScreenRecording() {
         let alert = NSAlert()
         alert.messageText = "FrostFold needs Screen Recording"
         alert.informativeText = """
@@ -121,7 +174,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             NSWorkspace.shared.open(url)
         }
         NSApp.terminate(nil)
-        return false
     }
 
     private func report(_ message: String) {
