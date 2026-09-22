@@ -27,6 +27,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var previewWindow: PreviewWindowController?
     private var cancellables = Set<AnyCancellable>()
     private var requestTimer: Timer?
+    private var lastReported: String?
+    private var isReporting = false
 
     /// A window asked for on the command line, opened once startup is done.
     var windowOnLaunch: String?
@@ -64,8 +66,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .receive(on: RunLoop.main)
             .sink { [weak self] message in
                 // A problem the user cannot otherwise see, because there is no
-                // menu bar item to show it in.
-                if let message { self?.report(message) }
+                // menu bar item to show it in. Said once, until it clears.
+                guard let self else { return }
+                guard let message else { self.lastReported = nil; return }
+                guard message != self.lastReported else { return }
+                self.lastReported = message
+                self.report(message)
             }
             .store(in: &cancellables)
 
@@ -186,6 +192,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func report(_ message: String) {
+        // The render timer keeps running under a modal alert, so without this
+        // a failure repeated during one would stack another on top of it.
+        guard !isReporting else { return }
+        isReporting = true
+        defer { isReporting = false }
+
         let alert = NSAlert()
         alert.messageText = "FrostFold"
         alert.informativeText = message

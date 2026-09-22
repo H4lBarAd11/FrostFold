@@ -49,13 +49,22 @@ final class EffectController: ObservableObject {
     private var increaseContrast = false
     private var capturePending = false
 
+    /// Capture failures are retried quietly, with a growing pause between
+    /// attempts: waking up or unplugging a display leaves ScreenCaptureKit
+    /// without the display for a moment, and that isn't worth telling anyone.
+    /// Only a failure that outlasts `failureGrace` is reported.
+    private var captureRetryAt: CFAbsoluteTime = 0
+    private var captureBackoff: Double = 0
+    private var captureFailingSince: CFAbsoluteTime?
+    private static let failureGrace: Double = 10
+
     init?() {
         guard let renderer = MetalRenderer() else { return nil }
         self.renderer = renderer
         self.capturer = ScreenCapturer(device: renderer.device)
 
         capturer.onError = { [weak self] error in
-            self?.statusMessage = error.localizedDescription
+            self?.captureFailed(error)
         }
 
         sensor = LidAngleSensor()
@@ -89,7 +98,13 @@ final class EffectController: ObservableObject {
         NotificationCenter.default
             .addObserver(forName: NSApplication.didChangeScreenParametersNotification,
                          object: nil, queue: .main) { [weak self] _ in
-                self?.rebuildOverlay()
+                guard let self else { return }
+                self.rebuildOverlay()
+                // A stream on a display that changed size or went away is no
+                // use; the next tick that needs one starts it afresh.
+                self.teardownCapture()
+                self.captureRetryAt = 0
+                self.captureBackoff = 0
             }
 
         Settings.shared.$enabled
@@ -160,18 +175,39 @@ final class EffectController: ObservableObject {
     }
 
     private func ensureCapture() {
-        guard !capturer.isRunning, !capturePending, let displayID else { return }
+        guard !capturer.isRunning, !capturePending,
+              CFAbsoluteTimeGetCurrent() >= captureRetryAt,
+              let displayID else { return }
         capturePending = true
         let fps = max(60, Settings.shared.stationaryFPS.rawValue)
         Task { @MainActor [weak self] in
             guard let self else { return }
             do {
                 try await self.capturer.start(displayID: displayID, fps: fps)
+                self.captureBackoff = 0
+                self.captureFailingSince = nil
                 self.statusMessage = nil
             } catch {
-                self.statusMessage = error.localizedDescription
+                self.captureFailed(error)
             }
             self.capturePending = false
+        }
+    }
+
+    private func captureFailed(_ error: Error) {
+        let now = CFAbsoluteTimeGetCurrent()
+        captureBackoff = min(4, max(0.25, captureBackoff * 2))
+        captureRetryAt = now + captureBackoff
+
+        // Nothing a retry can fix, so say so straight away.
+        if case ScreenCapturer.CaptureError.noPermission = error {
+            statusMessage = error.localizedDescription
+            return
+        }
+        let since = captureFailingSince ?? now
+        captureFailingSince = since
+        if now - since >= Self.failureGrace {
+            statusMessage = error.localizedDescription
         }
     }
 
@@ -199,7 +235,12 @@ final class EffectController: ObservableObject {
         if active {
             ensureCapture()
             idleSince = nil
-        } else if capturer.isRunning {
+        } else {
+            // A failure from the last time the lid moved says nothing about
+            // the next; start the grace period over.
+            captureFailingSince = nil
+        }
+        if !active, capturer.isRunning {
             // Linger briefly so a lid that pauses and resumes doesn't pay the
             // stream start-up cost twice.
             let now = CFAbsoluteTimeGetCurrent()

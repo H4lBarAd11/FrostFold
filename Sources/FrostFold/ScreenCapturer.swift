@@ -84,11 +84,15 @@ final class ScreenCapturer: NSObject, SCStreamOutput, SCStreamDelegate {
             content = try await SCShareableContent.excludingDesktopWindows(false,
                                                                           onScreenWindowsOnly: true)
         } catch {
-            throw CaptureError.noPermission
+            // This also fails for a moment while the display list is being
+            // rebuilt after a wake. Only blame the permission if it's gone.
+            throw Self.hasPermission() ? error : CaptureError.noPermission
         }
 
-        guard let display = content.displays.first(where: { $0.displayID == displayID })
-                         ?? content.displays.first else {
+        // No falling back to another display: right after a wake or a display
+        // being unplugged the list can briefly be missing the one we want, and
+        // capturing whichever is left would put the wrong screen in the glass.
+        guard let display = content.displays.first(where: { $0.displayID == displayID }) else {
             throw CaptureError.noDisplay
         }
 
@@ -177,6 +181,7 @@ final class ScreenCapturer: NSObject, SCStreamOutput, SCStreamDelegate {
     func stream(_ stream: SCStream, didStopWithError error: Error) {
         isRunning = false
         self.stream = nil
+        clearLatest()
         DispatchQueue.main.async { [weak self] in self?.onError?(error) }
     }
 }
