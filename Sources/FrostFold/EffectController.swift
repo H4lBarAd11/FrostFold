@@ -139,12 +139,15 @@ final class EffectController: ObservableObject {
         overlay?.orderOut(nil)
     }
 
+    /// Nil while the lid is shut on an external display. No falling back to
+    /// another screen: the hinge reads shut then, and the external display
+    /// would get the fully folded pane.
     static func builtInScreen() -> NSScreen? {
         NSScreen.screens.first { screen in
             guard let id = screen.deviceDescription[.init("NSScreenNumber")] as? CGDirectDisplayID
             else { return false }
             return CGDisplayIsBuiltin(id) != 0
-        } ?? NSScreen.main
+        }
     }
 
     private var displayID: CGDirectDisplayID? {
@@ -152,7 +155,14 @@ final class EffectController: ObservableObject {
     }
 
     private func rebuildOverlay() {
-        guard Settings.shared.enabled, let screen = Self.builtInScreen() else { return }
+        guard Settings.shared.enabled else { return }
+        guard let screen = Self.builtInScreen() else {
+            // AppKit moves a window off a display that goes away onto one that
+            // remains, so an overlay left standing would land on the external.
+            overlay?.orderOut(nil)
+            overlay = nil
+            return
+        }
         if let overlay, overlay.targetScreen === screen {
             overlay.setFrame(screen.frame, display: false)
             overlay.orderFrontRegardless()
@@ -171,6 +181,8 @@ final class EffectController: ObservableObject {
     private var effectActive: Bool {
         guard Settings.shared.enabled else { return false }
         if previewView != nil { return true }
+        // Lid shut on an external display: nothing to cover.
+        guard overlay != nil else { return false }
         return Settings.shared.fold(forLidAngle: angle) > 0.002 || isMoving
     }
 

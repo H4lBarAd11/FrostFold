@@ -48,7 +48,8 @@ enum SelfTest {
         // Built-in display
         let screen = EffectController.builtInScreen()
         check("Built-in display", screen != nil,
-              screen.map { "\(Int($0.frame.width))×\(Int($0.frame.height)) @\(Int($0.backingScaleFactor))x" } ?? "")
+              screen.map { "\(Int($0.frame.width))×\(Int($0.frame.height)) @\(Int($0.backingScaleFactor))x" }
+                ?? "not active — open the lid and run it again")
 
         print("\n\(failures == 0 ? "All checks passed." : "\(failures) check(s) failed.")")
         exit(failures == 0 ? 0 : 1)
