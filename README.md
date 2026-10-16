@@ -279,6 +279,9 @@ Scripts/icon.sh
 # Redraw docs/readme/banner.svg, with DM Sans embedded.
 python3 Tools/banner/make.py
 
+# Redraw docs/social-preview.png, the card a link to this repository unfurls into.
+Scripts/social-preview.sh
+
 # Create the self-signed code-signing identity (once).
 Scripts/signing-identity.sh
 ```
@@ -306,7 +309,7 @@ Sources/FrostFold/
   SelfTest.swift         --selftest
 Tools/filmstrip/         still-image renderer
 Tools/icon/              draws the app icon
-Tools/banner/            draws the README banner
+Tools/banner/            draws the README banner and the social preview
 Tests/FrostFoldTests/    the fold's arithmetic, and regressions for two
                          bugs that a still image could not have caught
 Scripts/                 bundle.sh, filmstrip.sh, icon.sh, signing-identity.sh

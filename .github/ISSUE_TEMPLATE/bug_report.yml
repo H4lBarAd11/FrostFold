@@ -1,0 +1,68 @@
+name: Bug report
+description: Something FrostFold does wrong, or doesn't do
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time. The self-test output below answers most of the questions I'd ask first, so please include it.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: And what you expected instead. If it's visual, give a rough lid angle.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: How to make it happen
+      placeholder: |
+        1. Open the lid fully
+        2. Plug in an external display
+        3. Close the lid to about 40°
+  - type: input
+    id: mac
+    attributes:
+      label: Mac
+      placeholder: MacBook Air 13-inch, M3, 2024
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+      placeholder: macOS 26.1
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: FrostFold version
+      description: The release you downloaded, or the commit you built (`git rev-parse --short HEAD`).
+      placeholder: 1.0.2
+    validations:
+      required: true
+  - type: dropdown
+    id: displays
+    attributes:
+      label: Displays
+      description: What was attached when it happened.
+      multiple: true
+      options:
+        - The built-in display only
+        - An external display
+        - An iPad as a display
+  - type: textarea
+    id: selftest
+    attributes:
+      label: Self-test output
+      description: "Paste what this prints: `/Applications/FrostFold.app/Contents/MacOS/FrostFold --selftest`"
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: more
+    attributes:
+      label: Anything else
+      description: Settings you've changed, screenshots or a screen recording. These show whatever is on your screen, so crop them or switch to a plain wallpaper first.

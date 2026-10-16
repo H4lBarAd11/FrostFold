@@ -1,0 +1,22 @@
+name: Idea
+description: Suggest a change to what FrostFold does
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        FrostFold is small on purpose and does one thing. Ideas that make that one thing better are the likeliest to land. If you mean to write the code yourself, please open this first, so we can agree on it before you start.
+  - type: textarea
+    id: idea
+    attributes:
+      label: The idea
+      description: What would FrostFold do that it doesn't now?
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why
+      description: What would it change for you?
+    validations:
+      required: true

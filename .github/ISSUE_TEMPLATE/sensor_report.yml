@@ -1,0 +1,41 @@
+name: Sensor report
+description: Tell me whether your Mac has the lid-angle sensor, if the README doesn't list it
+title: "Sensor report: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Apple doesn't document which Macs report a continuous lid angle, so the README's list grows from reports like this one. Thanks for filing it, whatever the answer.
+  - type: input
+    id: mac
+    attributes:
+      label: Mac
+      description: The full name from Apple menu → About This Mac.
+      placeholder: MacBook Pro 14-inch, M5, 2025
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+      placeholder: macOS 26.1
+    validations:
+      required: true
+  - type: dropdown
+    id: works
+    attributes:
+      label: Does the effect follow the lid?
+      options:
+        - "Yes"
+        - "No"
+        - I only ran the self-test
+    validations:
+      required: true
+  - type: textarea
+    id: selftest
+    attributes:
+      label: Self-test output
+      description: "Paste what this prints: `/Applications/FrostFold.app/Contents/MacOS/FrostFold --selftest`"
+      render: text
+    validations:
+      required: true
