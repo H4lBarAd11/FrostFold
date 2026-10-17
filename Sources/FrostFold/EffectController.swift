@@ -107,6 +107,19 @@ final class EffectController: ObservableObject {
                 self.captureBackoff = 0
             }
 
+        // Time asleep isn't time spent failing. A capture that failed as the
+        // lid shut would otherwise still be "failing" when it opens an hour
+        // later, long past the grace, and the first miss after waking would
+        // be reported.
+        NSWorkspace.shared.notificationCenter
+            .addObserver(forName: NSWorkspace.didWakeNotification,
+                         object: nil, queue: .main) { [weak self] _ in
+                guard let self else { return }
+                self.captureRetryAt = 0
+                self.captureBackoff = 0
+                self.captureFailingSince = nil
+            }
+
         Settings.shared.$enabled
             .receive(on: RunLoop.main)
             .sink { [weak self] on in
@@ -247,9 +260,11 @@ final class EffectController: ObservableObject {
         if active {
             ensureCapture()
             idleSince = nil
-        } else {
-            // A failure from the last time the lid moved says nothing about
-            // the next; start the grace period over.
+        }
+        // A failure from the last time the lid moved says nothing about the
+        // next, and one with the lid shut is no surprise: the display is dark.
+        // Either way, start the grace period over.
+        if !active || angle <= settings.shutAngle {
             captureFailingSince = nil
         }
         if !active, capturer.isRunning {
